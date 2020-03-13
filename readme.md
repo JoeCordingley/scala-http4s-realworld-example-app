@@ -1,5 +1,7 @@
 # ![RealWorld Example App](logo.png)
 
+[![Build Status](https://travis-ci.org/alex-k1/scala-http4s-realworld-example-app.svg?branch=master)](https://travis-ci.org/alex-k1/scala-http4s-realworld-example-app)
+
 > ### Scala + http4s codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
 
 
