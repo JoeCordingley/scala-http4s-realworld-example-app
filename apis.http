@@ -1,0 +1,91 @@
+#
+:base-url = http://localhost:8080/api
+
+# register
+POST :base-url/users
+Content-Type: application/json
+{"user":{"email":"user1@app.com", "username":"user1", "password":"password123"}}
+
+# login user
+POST :base-url/users/login
+Content-Type: application/json
+{"user":{"email":"user1@app.com", "password":"password123"}}
+
+#
+:jwt = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1ODQxMzk1MjAsImp0aSI6IjI4YjYxODQwYmYzOTNhZWM4ZTYwNDRhZGFmMjY0YWQ2IiwicGF5bG9hZCI6eyJhdXRoVXNlciI6M319.tiUNNXVQ4OyMaGni6tgLUVVHrRS0atpu-P-TakrjZeI
+
+# get current user
+GET :base-url/user
+Authorization: Token :jwt
+
+# update user
+PUT :base-url/user
+Authorization: Token :jwt
+Content-Type: application/json
+{"user":{"bio":"bio-bio-bio", "username":"user2","email":"user2@app.com"}}
+
+# get profile
+GET :base-url/profiles/user1
+Authorization: Token :jwt
+
+# follow
+POST :base-url/profiles/user2/follow
+Authorization: Token :jwt
+
+# unfollow
+DELETE :base-url/profiles/username7/follow
+Authorization: Token :jwt
+
+# get all articles
+GET :base-url/articles
+Authorization: Token :jwt
+
+# get feed
+GET :base-url/articles/feed
+Authorization: Token :jwt
+
+# get article by slug
+GET :base-url/articles/my-first-article-2-dsfdsf-oKAMRxA
+Authorization: Token :jwt
+
+# add article
+POST :base-url/articles
+Authorization: Token :jwt
+Content-Type: application/json
+{"article":{"title":"title123-213","description":"abs", "body":"sdf", "tagList":["hello", "world", "scala"]}}
+
+# update article
+PUT :base-url/articles/title1-z5vEb9
+Authorization: Token :jwt
+Content-Type: application/json
+{"article":{"body":"", "description":" "}}
+
+# delete article
+DELETE :base-url/articles/my-first-article-2-oB4wz2A
+Authorization: Token :jwt
+
+# favorite article
+POST :base-url/articles/my-first-article-2-dsfdsf-oKAMRxA/favorite
+Authorization: Token :jwt
+
+# unfavorite article
+DELETE :base-url/articles/my-first-article-2-dsfdsf-oKAMRxA/favorite
+Authorization: Token :jwt
+
+# add comment
+POST :base-url/articles/title123-213-2ENOvPq/comments
+Authorization: Token :jwt
+Content-Type: application/json
+{"comment":{"body":"ddd sdfasdf "}}
+
+# get comments
+GET :base-url/articles/title123-213-2ENOvPq/comments
+Authorization: Token :jwt
+
+# delete comments
+DELETE :base-url/articles/title1-z5vEb9/comments/9
+Authorization: Token :jwt
+
+# get tags
+GET :base-url/tags
+Authorization: Token :jwt

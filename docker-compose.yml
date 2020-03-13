@@ -1,0 +1,38 @@
+version: '3.7'
+
+services:
+
+  api:
+    image: scala-http4s-realworld:0.0.1
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+      - migrate
+    environment:
+      - "API_HOST=0.0.0.0"
+      - "API_PORT=8080"
+      - "ID_HASHER_SALT=8a51c03f1ff77c2b8e76da512070c23c5e69813d5c61732b3025199e5f0c14d5"
+      - "JWT_TOKEN_KEY=8c3c13530da35492b627866080342dd9dd96bcf3f7858d5de9ee19c63f0a27e5"
+      - "DB_USER=db_user"
+      - "DB_PASSWORD=db_password"
+      - "DB_HOST=db"
+      - "DB_PORT=5432"
+
+  db:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      - "POSTGRES_USER=db_user"
+      - "POSTGRES_PASSWORD=db_password"
+
+  migrate:
+    image: flyway/flyway
+    command: -url=jdbc:postgresql://db:5432/postgres -user=db_user -password=db_password -connectRetries=60 migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      - db

@@ -10,8 +10,18 @@
 .classpath
 *.launch
 .settings/
+.metals/
+.bloop/
+project/metals.sbt
+.projectile
 
-
-#System Files
+# System Files
 .DS_Store
 Thumbs.db
+
+# builds
+target/
+
+# tmp file
+.#*
+
