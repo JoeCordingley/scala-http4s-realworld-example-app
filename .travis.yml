@@ -4,3 +4,14 @@ jdk: openjdk11
 
 scala:
    - 2.13.1
+
+services:
+  - docker
+  
+script:
+   # run app tests
+   - sbt ++$TRAVIS_SCALA_VERSION test
+   # run postman tests 
+   - sbt docker:publishLocal
+   - docker-compose up -d
+   - APIURL=http://localhost:8080/api ./api-tests/run-api-tests.sh
