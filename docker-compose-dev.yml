@@ -7,10 +7,13 @@ services:
     restart: always
     ports:
       - 5432:5432
+    environment:
+      - "POSTGRES_USER=db_user"
+      - "POSTGRES_PASSWORD=db_password"
 
   migrate-dev:
     image: flyway/flyway
-    command: -url=jdbc:postgresql://db-dev:5432/postgres -user=postgres -connectRetries=60 migrate
+    command: -url=jdbc:postgresql://db-dev:5432/postgres -user=db_user -password=db_password -connectRetries=60 migrate
     volumes:
       - ./src/main/resources/db/migration:/flyway/sql
     depends_on:
