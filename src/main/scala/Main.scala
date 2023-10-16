@@ -1,22 +1,21 @@
 package io.rw.app
 
-import cats._
-import cats.data._
-import cats.effect._
-import cats.implicits._
+import cats.*
+import cats.data.*
+import cats.effect.*
+import cats.implicits.*
 import doobie.util.transactor.Transactor
-import io.rw.app.apis._
-import io.rw.app.data._
-import io.rw.app.repos._
-import io.rw.app.routes._
-import io.rw.app.security._
-import io.rw.app.utils._
-import org.http4s._
-import org.http4s.implicits._
-import org.http4s.server._
-import org.http4s.server.blaze._
-import pureconfig._
-import pureconfig.generic.auto._
+import io.rw.app.apis.*
+import io.rw.app.data.*
+import io.rw.app.repos.*
+import io.rw.app.routes.*
+import io.rw.app.security.*
+import io.rw.app.utils.*
+import org.http4s.*
+import org.http4s.implicits.*
+import org.http4s.server.*
+import org.http4s.blaze.server.BlazeServerBuilder
+import pureconfig.*
 import tsec.mac.jca.HMACSHA256
 
 
@@ -48,7 +47,7 @@ object Main extends IOApp {
     val tagApis = TagApis.impl(tagRepo)
     val commentApis = CommentApis.impl(commentRepo, articleRepo, followerRepo)
 
-    val routes = List(UserRoutes(userApis), ProfileRoutes(profileApis), ArticleRoutes(articleApis), CommentRoutes(commentApis), TagRoutes(tagApis))
+    val routes: List[AppRoutes[IO]] = List(UserRoutes(userApis), ProfileRoutes(profileApis), ArticleRoutes(articleApis), CommentRoutes(commentApis), TagRoutes(tagApis))
     val httpApp = mkHttpApp(routes, token)
 
     BlazeServerBuilder[IO].bindHttp(config.apiPort, config.apiHost).withHttpApp(httpApp).serve.compile.drain.as(ExitCode.Success)

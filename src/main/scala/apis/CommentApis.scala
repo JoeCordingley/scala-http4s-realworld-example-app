@@ -1,14 +1,14 @@
 package io.rw.app.apis
 
 import cats.data.OptionT
-import cats.implicits._
+import cats.implicits.*
 import cats.Monad
-import io.rw.app.data.{Entities => E, _}
-import io.rw.app.data.ApiErrors._
-import io.rw.app.data.ApiInputs._
-import io.rw.app.data.ApiOutputs._
-import io.rw.app.repos._
-import io.rw.app.utils._
+import io.rw.app.data.{Entities as E, *}
+import io.rw.app.data.ApiErrors.*
+import io.rw.app.data.ApiInputs.*
+import io.rw.app.data.ApiOutputs.*
+import io.rw.app.repos.*
+import io.rw.app.utils.*
 import java.time.Instant
 
 trait CommentApis[F[_]] {
@@ -33,7 +33,7 @@ object CommentApis {
         following <- OptionT.liftF(followerRepo.findFollower(articleAuthor.id, input.authUser).map(_.nonEmpty))
       } yield mkComment(commentWithId, commentAuthor.entity, following)
 
-      comment.value.map(_.map(AddCommentOutput)).map(_.toRight(ArticleNotFound()))
+      comment.value.map(_.map(AddCommentOutput.apply)).map(_.toRight(ArticleNotFound()))
     }
 
     def get(input: GetCommentsInput): F[ApiResult[GetCommentsOutput]] = {
@@ -44,7 +44,7 @@ object CommentApis {
         followers <- OptionT.liftF(input.authUser.traverse(followerRepo.findFollowers(authorsIds, _)).map(_.getOrElse(List.empty)))
       } yield mkComments(commentsWithAuthors, followers)
 
-      comments.value.map(_.map(GetCommentsOutput)).map(_.toRight(ArticleNotFound()))
+      comments.value.map(_.map(GetCommentsOutput.apply)).map(_.toRight(ArticleNotFound()))
     }
 
     def delete(input: DeleteCommentInput): F[ApiResult[DeleteCommentOutput]] = {

@@ -2,12 +2,12 @@ package test.io.rw.app
 
 import cats.effect.IO
 import io.rw.app.data.JwtTokenPayload
-import io.rw.app.security._
+import io.rw.app.security.*
 import tsec.mac.jca.HMACSHA256
-import utest._
+import utest.*
+import cats.effect.unsafe.implicits.global
 
 object securityTests extends TestSuite {
-
   val tests = Tests {
     test("test hashed password") {
       val passwordHasher = PasswordHasher.impl

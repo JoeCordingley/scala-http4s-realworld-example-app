@@ -1,10 +1,10 @@
 package io.rw.app.repos
 
 import cats.effect.IO
-import doobie._
-import doobie.implicits._
-import doobie.implicits.legacy.instant._
-import io.rw.app.data.Entities._
+import doobie.*
+import doobie.implicits.*
+import doobie.implicits.legacy.instant.*
+import io.rw.app.data.Entities.*
 
 trait CommentRepo[F[_]] {
   def findCommentsByArticleId(articleId: Int): F[List[(WithId[Comment], WithId[User])]]

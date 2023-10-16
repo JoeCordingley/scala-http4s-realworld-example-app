@@ -1,14 +1,14 @@
 package io.rw.app.apis
 
 import cats.data.OptionT
-import cats.implicits._
+import cats.implicits.*
 import cats.Monad
-import io.rw.app.data.{Entities => E, _}
-import io.rw.app.data.ApiErrors._
-import io.rw.app.data.ApiInputs._
-import io.rw.app.data.ApiOutputs._
-import io.rw.app.repos._
-import io.rw.app.utils._
+import io.rw.app.data.{Entities as E, *}
+import io.rw.app.data.ApiErrors.*
+import io.rw.app.data.ApiInputs.*
+import io.rw.app.data.ApiOutputs.*
+import io.rw.app.repos.*
+import io.rw.app.utils.*
 import java.time.Instant
 import io.rw.app.data
 
@@ -60,7 +60,7 @@ object ArticleApis {
         (tags, favorited, favoritesCount) <- OptionT.liftF(articleExtra(input.authUser, articleWithId.id))
       } yield mkArticle(articleWithId.entity, tags, favorited, favoritesCount, author.entity, following)
 
-      article.value.map(_.map(GetArticleOutput).toRight(ArticleNotFound()))
+      article.value.map(_.map(GetArticleOutput.apply).toRight(ArticleNotFound()))
     }
 
     def create(input: CreateArticleInput): F[ApiResult[CreateArticleOutput]] = {
@@ -87,7 +87,7 @@ object ArticleApis {
         (tags, favorited, favoritesCount) <- OptionT.liftF(articleExtra(Some(input.authUser), articleWithId.id))
       } yield mkArticle(articleWithId.entity, tags, favorited, favoritesCount, author.entity, false)
 
-      article.value.map(_.map(UpdateArticleOutput).toRight(ArticleNotFound()))
+      article.value.map(_.map(UpdateArticleOutput.apply).toRight(ArticleNotFound()))
     }
 
     def delete(input: DeleteArticleInput): F[ApiResult[DeleteArticleOutput]] =
@@ -102,7 +102,7 @@ object ArticleApis {
         (tags, favorited, favoritesCount) <- OptionT.liftF(articleExtra(Some(input.authUser), articleWithId.id))
       } yield mkArticle(articleWithId.entity, tags, favorited, favoritesCount, author.entity, following)
 
-      article.value.map(_.map(FavoriteArticleOutput).toRight(ArticleNotFound()))
+      article.value.map(_.map(FavoriteArticleOutput.apply).toRight(ArticleNotFound()))
     }
 
     def unfavorite(input: UnfavoriteArticleInput): F[ApiResult[UnfavoriteArticleOutput]] = {
@@ -114,7 +114,7 @@ object ArticleApis {
         (tags, favorited, favoritesCount) <- OptionT.liftF(articleExtra(Some(input.authUser), articleWithId.id))
       } yield mkArticle(articleWithId.entity, tags, favorited, favoritesCount, author.entity, following)
 
-      article.value.map(_.map(UnfavoriteArticleOutput).toRight(ArticleNotFound()))
+      article.value.map(_.map(UnfavoriteArticleOutput.apply).toRight(ArticleNotFound()))
     }
 
     def articleExtra(authUser: Option[AuthUser], articleId: Int): F[(List[E.Tag], Boolean, Int)] =

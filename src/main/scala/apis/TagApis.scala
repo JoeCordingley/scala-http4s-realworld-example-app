@@ -1,13 +1,13 @@
 package io.rw.app.apis
 
 import cats.data.OptionT
-import cats.implicits._
+import cats.implicits.*
 import cats.Monad
-import io.rw.app.data.{Entities => E, _}
-import io.rw.app.data.ApiErrors._
-import io.rw.app.data.ApiInputs._
-import io.rw.app.data.ApiOutputs._
-import io.rw.app.repos._
+import io.rw.app.data.{Entities as E, *}
+import io.rw.app.data.ApiErrors.*
+import io.rw.app.data.ApiInputs.*
+import io.rw.app.data.ApiOutputs.*
+import io.rw.app.repos.*
 
 trait TagApis[F[_]] {
   def get(input: GetTagsInput): F[ApiResult[GetTagsOutput]]

@@ -2,19 +2,19 @@ package test.io.rw.app
 
 import cats.effect.IO
 import io.circe.Encoder
-import io.circe.generic.auto._
-import io.rw.app.data._
-import io.rw.app.data.ApiErrors._
-import io.rw.app.data.ApiInputs._
-import io.rw.app.data.ApiOutputs._
-import io.rw.app.data.RequestBodies._
-import io.rw.app.routes._
-import io.rw.app.utils._
-import io.rw.app.security._
-import org.http4s._
-import org.http4s.circe.CirceEntityCodec._
+import io.circe.generic.auto.*
+import io.rw.app.data.*
+import io.rw.app.data.ApiErrors.*
+import io.rw.app.data.ApiInputs.*
+import io.rw.app.data.ApiOutputs.*
+import io.rw.app.data.RequestBodies.*
+import io.rw.app.routes.*
+import io.rw.app.utils.*
+import io.rw.app.security.*
+import org.http4s.*
+import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.headers.Authorization
-import org.http4s.implicits._
+import org.http4s.implicits.*
 import tsec.mac.jca.HMACSHA256
 
 package object routes {

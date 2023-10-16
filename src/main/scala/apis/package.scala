@@ -1,6 +1,6 @@
 package io.rw.app
 
-import io.rw.app.data.{Entities => E, _}
+import io.rw.app.data.{Entities as E, *}
 
 package object apis {
 

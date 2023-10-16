@@ -1,9 +1,9 @@
 package io.rw.app
 
-import cats.data._
-import cats.data.Validated._
-import cats.implicits._
-import io.rw.app.data.RequestBodies._
+import cats.data.*
+import cats.data.Validated.*
+import cats.implicits.*
+import io.rw.app.data.RequestBodies.*
 
 object valiation {
 
@@ -26,25 +26,25 @@ object valiation {
   type ValidationResult[A] = ValidatedNec[InvalidField, A]
 
   def validAuthenticateUserBody(body: AuthenticateUserBody): ValidationResult[AuthenticateUserBody] =
-    (validEmail(body.email), body.password.validNec).mapN(AuthenticateUserBody)
+    (validEmail(body.email), body.password.validNec).mapN(AuthenticateUserBody.apply)
 
   def validRegisterUserBody(body: RegisterUserBody): ValidationResult[RegisterUserBody] =
-    (validUsername(body.username), validEmail(body.email), validPassword(body.password)).mapN(RegisterUserBody)
+    (validUsername(body.username), validEmail(body.email), validPassword(body.password)).mapN(RegisterUserBody.apply)
 
   def validUpdateUserBody(body: UpdateUserBody): ValidationResult[UpdateUserBody] =
-    (body.username.traverse(validUsername), body.email.traverse(validEmail), body.password.traverse(validPassword), body.bio.validNec, body.image.validNec).mapN(UpdateUserBody)
+    (body.username.traverse(validUsername), body.email.traverse(validEmail), body.password.traverse(validPassword), body.bio.validNec, body.image.validNec).mapN(UpdateUserBody.apply)
 
   def validCreateArticleBody(body: CreateArticleBody): ValidationResult[CreateArticleBody] =
-    (validTitle(body.title), validDescription(body.description), validBody(body.body), body.tagList.traverse(validTags)).mapN(CreateArticleBody)
+    (validTitle(body.title), validDescription(body.description), validBody(body.body), body.tagList.traverse(validTags)).mapN(CreateArticleBody.apply)
 
   def validUpdateArticleBody(body: UpdateArticleBody): ValidationResult[UpdateArticleBody] =
-    (body.title.traverse(validTitle), body.description.traverse(validDescription), body.body.traverse(validBody)).mapN(UpdateArticleBody)
+    (body.title.traverse(validTitle), body.description.traverse(validDescription), body.body.traverse(validBody)).mapN(UpdateArticleBody.apply)
 
   def validAddCommentBody(body: AddCommentBody): ValidationResult[AddCommentBody] =
-    validBody(body.body).map(AddCommentBody)
+    validBody(body.body).map(AddCommentBody.apply)
 
-  import validators._
-  import InvalidFields._
+  import validators.*
+  import InvalidFields.*
   def validEmail(email: String): ValidationResult[String] = {
     val trimmedEmail = email.trim
     (notBlank(trimmedEmail), max(trimmedEmail, 350), looksLikeEmail(trimmedEmail)).mapN({ case t => t._1 }).leftMap(toInvalidField(_, InvalidEmail.apply(_)))

@@ -2,12 +2,12 @@ package io.rw.app.repos
 
 import cats.data.OptionT
 import cats.effect.IO
-import cats.implicits._
-import doobie._
-import doobie.Fragments._
-import doobie.implicits._
-import doobie.implicits.legacy.instant._
-import io.rw.app.data.Entities._
+import cats.implicits.*
+import doobie.*
+import doobie.Fragments.*
+import doobie.implicits.*
+import doobie.implicits.legacy.instant.*
+import io.rw.app.data.Entities.*
 import io.rw.app.data.{ArticleFilter, Pagination}
 
 trait ArticleRepo[F[_]] {

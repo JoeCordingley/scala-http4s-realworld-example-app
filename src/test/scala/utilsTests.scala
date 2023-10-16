@@ -1,7 +1,7 @@
 package test.io.rw.app
 
-import io.rw.app.utils._
-import utest._
+import io.rw.app.utils.*
+import utest.*
 
 object utilsTests extends TestSuite {
 

@@ -2,16 +2,16 @@ package io.rw.app
 
 import cats.data.Kleisli
 import cats.effect.IO
-import cats.implicits._
+import cats.implicits.*
 import java.text.Normalizer
 import java.text.Normalizer.Form
-import io.rw.app.data._
-import io.rw.app.routes._
-import io.rw.app.security._
+import io.rw.app.data.*
+import io.rw.app.routes.*
+import io.rw.app.security.*
 import org.hashids.Hashids
-import org.http4s._
-import org.http4s.implicits._
-import org.http4s.server._
+import org.http4s.*
+import org.http4s.implicits.*
+import org.http4s.server.*
 import org.http4s.server.middleware.CORS
 
 object utils {
@@ -52,6 +52,6 @@ object utils {
     val authMiddleware = AuthMiddleware(authUser[IO](token))
     val routes = authMiddleware(appRoutes.reduce(_ <+> _))
 
-    Router("/api" -> CORS(routes)).orNotFound
+    Router("/api" -> CORS.policy(routes)).orNotFound
   }
 }

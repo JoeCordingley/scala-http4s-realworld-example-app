@@ -1,13 +1,13 @@
 package io.rw.app.apis
 
 import cats.data.{EitherT, OptionT}
-import cats.implicits._
+import cats.implicits.*
 import cats.Monad
-import io.rw.app.data.{Entities => E, _}
-import io.rw.app.data.ApiErrors._
-import io.rw.app.data.ApiInputs._
-import io.rw.app.data.ApiOutputs._
-import io.rw.app.repos._
+import io.rw.app.data.{Entities as E, *}
+import io.rw.app.data.ApiErrors.*
+import io.rw.app.data.ApiInputs.*
+import io.rw.app.data.ApiOutputs.*
+import io.rw.app.repos.*
 import io.rw.app.security.{JwtToken, PasswordHasher}
 import java.time.Instant
 
@@ -29,7 +29,7 @@ object UserApis {
         token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(_.map(AuthenticateUserOutput).toRight(UserNotFoundOrPasswordNotMatched()))
+      userWithToken.value.map(_.map(AuthenticateUserOutput.apply).toRight(UserNotFoundOrPasswordNotMatched()))
     }
 
     def register(input: RegisterUserInput): F[ApiResult[RegisterUserOutput]] = {
@@ -45,7 +45,7 @@ object UserApis {
         token <- EitherT.liftF[F, ApiError, String](token.generate(JwtTokenPayload(userWithId.id)))
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(_.map(RegisterUserOutput))
+      userWithToken.value.map(_.map(RegisterUserOutput.apply))
     }
 
     def get(input: GetUserInput): F[ApiResult[GetUserOutput]] = {
@@ -54,7 +54,7 @@ object UserApis {
         token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(_.map(GetUserOutput).toRight(UserNotFound()))
+      userWithToken.value.map(_.map(GetUserOutput.apply).toRight(UserNotFound()))
     }
 
     def update(input: UpdateUserInput): F[ApiResult[UpdateUserOutput]] = {
@@ -71,7 +71,7 @@ object UserApis {
         token <- EitherT.liftF[F, ApiError, String](token.generate(JwtTokenPayload(userWithId.id)))
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(_.map(UpdateUserOutput))
+      userWithToken.value.map(_.map(UpdateUserOutput.apply))
     }
 
     def emailAndUsernameNotExist(email: String, username: String): F[Either[ApiError, Boolean]] = {

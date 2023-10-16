@@ -2,11 +2,11 @@ package io.rw.app.repos
 
 import cats.data.NonEmptyList
 import cats.effect.IO
-import doobie._
-import doobie.Fragments._
-import doobie.implicits._
-import doobie.implicits.legacy.instant._
-import io.rw.app.data.Entities._
+import doobie.*
+import doobie.Fragments.*
+import doobie.implicits.*
+import doobie.implicits.legacy.instant.*
+import io.rw.app.data.Entities.*
 
 trait TagRepo[F[_]] {
   def findPopularTags(): F[List[String]]

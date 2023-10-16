@@ -1,9 +1,9 @@
 package io.rw.app
 
 import cats.effect.IO
-import io.circe._
-import io.circe.generic.auto._
-import io.circe.syntax._
+import io.circe.*
+import io.circe.generic.auto.*
+import io.circe.syntax.*
 import io.rw.app.data.JwtTokenPayload
 import tsec.jws.mac.JWTMac
 import tsec.jwt.JWTClaims
@@ -32,7 +32,7 @@ object security {
 
   object JwtToken {
     def impl(key: MacSigningKey[HMACSHA256], durationMinutes: Int) = new JwtToken[IO] {
-      import scala.concurrent.duration._
+      import scala.concurrent.duration.*
 
       val payloadKeyName = "payload"
 

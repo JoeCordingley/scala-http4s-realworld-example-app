@@ -1,6 +1,8 @@
 package io.rw.app
 
 import java.time.Instant
+import pureconfig.ConfigReader
+import pureconfig.generic.derivation.default.*
 
 object data {
 
@@ -91,7 +93,7 @@ object data {
     case class Comment(body: String, articleId: Int, authorId: Int, createdAt: Instant, updatedAt: Instant)
   }
 
-  case class AppConfig(apiHost: String, apiPort: Int, idHasherSalt: String, jwtTokenKey: String, jwtTokenExpiration: Int, dbUser: String, dbPassword: String, dbUrl: String)
+  case class AppConfig(apiHost: String, apiPort: Int, idHasherSalt: String, jwtTokenKey: String, jwtTokenExpiration: Int, dbUser: String, dbPassword: String, dbUrl: String) derives ConfigReader
 
   case class JwtTokenPayload(authUser: AuthUser)
   case class ArticleFilter(tag: Option[String], author: Option[String], favorited: Option[String])

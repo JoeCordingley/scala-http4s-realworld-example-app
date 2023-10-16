@@ -1,14 +1,14 @@
 package io.rw.app.apis
 
 import cats.data.{EitherT, OptionT}
-import cats.implicits._
+import cats.implicits.*
 import cats.Monad
-import io.rw.app.data.{Entities => E, _}
-import io.rw.app.data.ApiErrors._
-import io.rw.app.data.ApiInputs._
-import io.rw.app.data.ApiOutputs._
+import io.rw.app.data.{Entities as E, *}
+import io.rw.app.data.ApiErrors.*
+import io.rw.app.data.ApiInputs.*
+import io.rw.app.data.ApiOutputs.*
 import java.time.Instant
-import io.rw.app.repos._
+import io.rw.app.repos.*
 import io.rw.app.security.{JwtToken, PasswordHasher}
 import io.rw.app.data
 
@@ -28,7 +28,7 @@ object ProfileApis {
         following <- OptionT.liftF(input.authUser.flatTraverse(followerRepo.findFollower(userWithId.id, _)).map(_.nonEmpty))
       } yield mkProfile(userWithId.entity, following)
 
-      profile.value.map(_.map(GetProfileOutput).toRight(ProfileNotFound()))
+      profile.value.map(_.map(GetProfileOutput.apply).toRight(ProfileNotFound()))
     }
 
     def follow(input: FollowUserInput): F[ApiResult[FollowUserOutput]] = {
