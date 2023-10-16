@@ -28,20 +28,36 @@ object TagRoutesTests extends WithEmbededDbTestSuite {
 
     test("get") {
       test("authenticated user should get all tags") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val mostPopularTag = "tagX"
         val tags1 = List(mostPopularTag, "tag1", "tag2", "tag3", "tag4")
         val tags2 = List("tag2", mostPopularTag, "tag4", "tag5", "tag6")
         val tags3 = List("tag7", "tag5", mostPopularTag)
-        val createArticleBody1 = CreateArticleBody("title1", "description", "body", Some(tags1))
-        val createArticleBody2 = CreateArticleBody("title2", "description", "body", Some(tags2))
-        val createArticleBody3 = CreateArticleBody("title3", "description", "body", Some(tags3))
+        val createArticleBody1 =
+          CreateArticleBody("title1", "description", "body", Some(tags1))
+        val createArticleBody2 =
+          CreateArticleBody("title2", "description", "body", Some(tags2))
+        val createArticleBody3 =
+          CreateArticleBody("title3", "description", "body", Some(tags3))
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody1), jwt)
-          rs2 <- postWithToken("articles", WrappedArticleBody(createArticleBody2), jwt)
-          rs3 <- postWithToken("articles", WrappedArticleBody(createArticleBody3), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody1),
+            jwt
+          )
+          rs2 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody2),
+            jwt
+          )
+          rs3 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody3),
+            jwt
+          )
           rs4 <- getWithToken("tags", jwt)
           tags <- rs4.as[GetTagsOutput].map(_.tags)
         } yield {
@@ -57,20 +73,36 @@ object TagRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("non authenticated user should get all tags") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val mostPopularTag = "tagX"
         val tags1 = List(mostPopularTag, "tag1", "tag2", "tag3", "tag4")
         val tags2 = List("tag2", mostPopularTag, "tag4", "tag5", "tag6")
         val tags3 = List("tag7", "tag5", mostPopularTag)
-        val createArticleBody1 = CreateArticleBody("title1", "description", "body", Some(tags1))
-        val createArticleBody2 = CreateArticleBody("title2", "description", "body", Some(tags2))
-        val createArticleBody3 = CreateArticleBody("title3", "description", "body", Some(tags3))
+        val createArticleBody1 =
+          CreateArticleBody("title1", "description", "body", Some(tags1))
+        val createArticleBody2 =
+          CreateArticleBody("title2", "description", "body", Some(tags2))
+        val createArticleBody3 =
+          CreateArticleBody("title3", "description", "body", Some(tags3))
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody1), jwt)
-          rs2 <- postWithToken("articles", WrappedArticleBody(createArticleBody2), jwt)
-          rs3 <- postWithToken("articles", WrappedArticleBody(createArticleBody3), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody1),
+            jwt
+          )
+          rs2 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody2),
+            jwt
+          )
+          rs3 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody3),
+            jwt
+          )
           rs4 <- get("tags")
           tags <- rs4.as[GetTagsOutput].map(_.tags)
         } yield {
@@ -95,9 +127,21 @@ object TagRoutesTests extends WithEmbededDbTestSuite {
       val tagRepo = TagRepo.impl(xa)
       val favoriteRepo = FavoriteRepo.impl(xa)
       val userApis = UserApis.impl(passwordHasher, token, userRepo)
-      val articleApis = ArticleApis.impl(articleRepo, followerRepo, tagRepo, favoriteRepo, idHasher)
+      val articleApis = ArticleApis.impl(
+        articleRepo,
+        followerRepo,
+        tagRepo,
+        favoriteRepo,
+        idHasher
+      )
       val tagApis = TagApis.impl(tagRepo)
-      mkApp(List(UserRoutes(userApis), ArticleRoutes(articleApis), TagRoutes(tagApis)))
+      mkApp(
+        List(
+          UserRoutes(userApis),
+          ArticleRoutes(articleApis),
+          TagRoutes(tagApis)
+        )
+      )
     }
   }
 }

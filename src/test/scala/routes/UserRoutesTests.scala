@@ -20,13 +20,13 @@ import test.io.rw.app.WithEmbededDbTestSuite
 import utest.*
 import cats.effect.unsafe.implicits.global
 
-
 object UserRoutesTests extends WithEmbededDbTestSuite {
 
   val tests = Tests {
     test("register") {
       test("new user should register and get valid token back") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           rs <- post("users", WrappedUserBody(registerBody))
@@ -39,11 +39,12 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
           validToken.isDefined ==> true
         }
 
-       t.unsafeRunSync()
+        t.unsafeRunSync()
       }
 
       test("new user with invalid email should get error") {
-        val registerBody = RegisterUserBody("username", "emailemail.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "emailemail.com", "password123")
 
         val t = for {
           rs <- post("users", WrappedUserBody(registerBody))
@@ -58,7 +59,8 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("new user with short password shold get error") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "passwor")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "passwor")
 
         val t = for {
           rs <- post("users", WrappedUserBody(registerBody))
@@ -66,13 +68,17 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
         } yield {
           rs.status ==> Status.UnprocessableEntity
           errors.size ==> 1
-          errors.get("password") ==> Some(List("is too short (minimum is 8 character)"))
+          errors.get("password") ==> Some(
+            List("is too short (minimum is 8 character)")
+          )
         }
 
         t.unsafeRunSync()
       }
 
-      test("new user with empty username, invalid email and short password shold get errors") {
+      test(
+        "new user with empty username, invalid email and short password shold get errors"
+      ) {
         val registerBody = RegisterUserBody("", "emailemail.com", "passwor")
 
         val t = for {
@@ -81,8 +87,12 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
         } yield {
           rs.status ==> Status.UnprocessableEntity
           errors.size ==> 3
-          errors.get("username") ==> Some(List("can't be blank", "is too short (minimum is 1 character)"))
-          errors.get("password") ==> Some(List("is too short (minimum is 8 character)"))
+          errors.get("username") ==> Some(
+            List("can't be blank", "is too short (minimum is 1 character)")
+          )
+          errors.get("password") ==> Some(
+            List("is too short (minimum is 8 character)")
+          )
           errors.get("email") ==> Some(List("is invalid"))
         }
 
@@ -90,8 +100,10 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("new user with existing username should get error") {
-        val registerBody1 = RegisterUserBody("username", "email@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username", "email_1@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username", "email_1@email.com", "password123")
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody1))
@@ -108,8 +120,10 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("new user with existing email should get error") {
-        val registerBody1 = RegisterUserBody("username", "email@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username_1", "email@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username_1", "email@email.com", "password123")
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody1))
@@ -128,8 +142,10 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
 
     test("authenticate") {
       test("existing user should authenticate and get valid token back") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val authenticateBody = AuthenticateUserBody("email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val authenticateBody =
+          AuthenticateUserBody("email@email.com", "password123")
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody))
@@ -146,8 +162,10 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("existing user with wrong password should get error") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val authenticateBody = AuthenticateUserBody("email@email.com", "password12345")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val authenticateBody =
+          AuthenticateUserBody("email@email.com", "password12345")
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody))
@@ -163,7 +181,8 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("non existing user should get error") {
-        val registerBody = AuthenticateUserBody("email@email.com", "password123")
+        val registerBody =
+          AuthenticateUserBody("email@email.com", "password123")
 
         val t = for {
           rs <- post("users/login", WrappedUserBody(registerBody))
@@ -180,7 +199,8 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
 
     test("get") {
       test("authenticated user should get itself with valid token back") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody))
@@ -220,7 +240,8 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("user with invalid token should get error") {
-        val anotherKey = HMACSHA256.unsafeBuildKey("secret_key_for_another_token_123".getBytes)
+        val anotherKey =
+          HMACSHA256.unsafeBuildKey("secret_key_for_another_token_123".getBytes)
         val anotherToken = JwtToken.impl(anotherKey, 60)
 
         val t = for {
@@ -236,8 +257,10 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
 
     test("update") {
       test("authenticated user should update itself and get valid token back") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val updateBody = UpdateUserBody(Some("username1"), None, None, None, Some("image"))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val updateBody =
+          UpdateUserBody(Some("username1"), None, None, None, Some("image"))
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody))
@@ -257,7 +280,8 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get error") {
-        val registerBody = UpdateUserBody(Some("username1"), None, None, None, None)
+        val registerBody =
+          UpdateUserBody(Some("username1"), None, None, None, None)
 
         val t = for {
           rs <- put("user", WrappedUserBody(registerBody))
@@ -269,9 +293,11 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("user with invalid token should get error") {
-        val anotherKey = HMACSHA256.unsafeBuildKey("secret_key_for_another_token_123".getBytes)
+        val anotherKey =
+          HMACSHA256.unsafeBuildKey("secret_key_for_another_token_123".getBytes)
         val anotherToken = JwtToken.impl(anotherKey, 60)
-        val registerBody = UpdateUserBody(Some("username1"), None, None, None, None)
+        val registerBody =
+          UpdateUserBody(Some("username1"), None, None, None, None)
 
         val t = for {
           anotherJwt <- anotherToken.generate(JwtTokenPayload(1))

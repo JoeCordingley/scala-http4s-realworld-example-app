@@ -12,9 +12,21 @@ trait WithEmbededDbTestSuite extends TestSuite {
   // use different port each time since tests run in parallel
   val pg = EmbeddedPostgres.builder().start()
   val port = pg.getPort()
-  val fw = Flyway.configure().dataSource(s"jdbc:postgresql://localhost:$port/postgres", "postgres", "postgres").load()
+  val fw = Flyway
+    .configure()
+    .dataSource(
+      s"jdbc:postgresql://localhost:$port/postgres",
+      "postgres",
+      "postgres"
+    )
+    .load()
 
-  val xa = Transactor.fromDriverManager[IO]("org.postgresql.Driver", s"jdbc:postgresql://localhost:$port/postgres", "postgres", "postgres")
+  val xa = Transactor.fromDriverManager[IO](
+    "org.postgresql.Driver",
+    s"jdbc:postgresql://localhost:$port/postgres",
+    "postgres",
+    "postgres"
+  )
 
   override def utestAfterAll(): Unit = {
     pg.close()

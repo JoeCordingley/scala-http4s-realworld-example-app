@@ -21,7 +21,8 @@ object security {
   object PasswordHasher {
     def impl = new PasswordHasher[IO] {
       def hash(psw: String): IO[String] = SCrypt.hashpw[IO](psw)
-      def validate(psw: String, hash: String): IO[Boolean] = SCrypt.checkpwBool[IO](psw, PasswordHash(hash))
+      def validate(psw: String, hash: String): IO[Boolean] =
+        SCrypt.checkpwBool[IO](psw, PasswordHash(hash))
     }
   }
 
@@ -31,27 +32,33 @@ object security {
   }
 
   object JwtToken {
-    def impl(key: MacSigningKey[HMACSHA256], durationMinutes: Int) = new JwtToken[IO] {
-      import scala.concurrent.duration.*
+    def impl(key: MacSigningKey[HMACSHA256], durationMinutes: Int) =
+      new JwtToken[IO] {
+        import scala.concurrent.duration.*
 
-      val payloadKeyName = "payload"
+        val payloadKeyName = "payload"
 
-      def generate(payload: JwtTokenPayload): IO[String] = {
-        for {
-          claims <- JWTClaims.withDuration[IO](expiration = Some(durationMinutes.minutes), customFields = List(payloadKeyName -> payload.asJson))
-          jwtStr <- JWTMac.buildToString[IO, HMACSHA256](claims, key)
-        } yield jwtStr
+        def generate(payload: JwtTokenPayload): IO[String] = {
+          for {
+            claims <- JWTClaims.withDuration[IO](
+              expiration = Some(durationMinutes.minutes),
+              customFields = List(payloadKeyName -> payload.asJson)
+            )
+            jwtStr <- JWTMac.buildToString[IO, HMACSHA256](claims, key)
+          } yield jwtStr
+        }
+
+        def validate(token: String): IO[Option[JwtTokenPayload]] = {
+          val payload = for {
+            jwt <- JWTMac.verifyAndParse[IO, HMACSHA256](token, key)
+            payloadE <- IO.pure(
+              jwt.body.getCustom[JwtTokenPayload](payloadKeyName)
+            )
+          } yield payloadE.toOption
+
+          // suppress error from verification
+          payload.handleErrorWith(_ => IO.pure(None))
+        }
       }
-
-      def validate(token: String): IO[Option[JwtTokenPayload]] = {
-        val payload = for {
-          jwt <- JWTMac.verifyAndParse[IO, HMACSHA256](token, key)
-          payloadE <- IO.pure(jwt.body.getCustom[JwtTokenPayload](payloadKeyName))
-        } yield payloadE.toOption
-
-        // suppress error from verification
-        payload.handleErrorWith(_ => IO.pure(None))
-      }
-    }
   }
 }

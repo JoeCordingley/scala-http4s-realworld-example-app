@@ -24,7 +24,8 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
   val tests = Tests {
     test("profile") {
       test("authenticated user should get profile") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -38,8 +39,11 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found error when profile does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found error when profile does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -52,7 +56,8 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get profile") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           _ <- logon(registerBody)
@@ -69,8 +74,10 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
 
     test("follow") {
       test("authenticated user should follow existing user") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody1)
@@ -86,8 +93,11 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when profile does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when profile does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -112,14 +122,22 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
 
     test("unfollow") {
       test("authenticated user should unfollow existing user") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody1)
           _ <- logon(registerBody2)
-          rs1 <- postWithToken(s"profiles/${registerBody2.username}/follow", jwt)
-          rs2 <- deleteWithToken(s"profiles/${registerBody2.username}/follow", jwt)
+          rs1 <- postWithToken(
+            s"profiles/${registerBody2.username}/follow",
+            jwt
+          )
+          rs2 <- deleteWithToken(
+            s"profiles/${registerBody2.username}/follow",
+            jwt
+          )
           profile <- rs2.as[FollowUserOutput].map(_.profile)
         } yield {
           rs1.status ==> Status.Ok
@@ -131,8 +149,11 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when profile does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when profile does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)

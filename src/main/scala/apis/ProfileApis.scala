@@ -20,35 +20,66 @@ trait ProfileApis[F[_]] {
 
 object ProfileApis {
 
-  def impl[F[_] : Monad](userRepo: UserRepo[F], followerRepo: FollowerRepo[F]) = new ProfileApis[F]() {
+  def impl[F[_]: Monad](userRepo: UserRepo[F], followerRepo: FollowerRepo[F]) =
+    new ProfileApis[F]() {
 
-    def get(input: GetProfileInput): F[ApiResult[GetProfileOutput]] = {
-      val profile = for {
-        userWithId <- OptionT(userRepo.findUserByUsername(input.username))
-        following <- OptionT.liftF(input.authUser.flatTraverse(followerRepo.findFollower(userWithId.id, _)).map(_.nonEmpty))
-      } yield mkProfile(userWithId.entity, following)
+      def get(input: GetProfileInput): F[ApiResult[GetProfileOutput]] = {
+        val profile = for {
+          userWithId <- OptionT(userRepo.findUserByUsername(input.username))
+          following <- OptionT.liftF(
+            input.authUser
+              .flatTraverse(followerRepo.findFollower(userWithId.id, _))
+              .map(_.nonEmpty)
+          )
+        } yield mkProfile(userWithId.entity, following)
 
-      profile.value.map(_.map(GetProfileOutput.apply).toRight(ProfileNotFound()))
+        profile.value.map(
+          _.map(GetProfileOutput.apply).toRight(ProfileNotFound())
+        )
+      }
+
+      def follow(input: FollowUserInput): F[ApiResult[FollowUserOutput]] = {
+        val profile = for {
+          userWithId <- EitherT.fromOptionF(
+            userRepo.findUserByUsername(input.username),
+            ProfileNotFound()
+          )
+          _ <- EitherT.cond[F](
+            input.authUser != userWithId.id,
+            (),
+            UserFollowingHimself(mkProfile(userWithId.entity, false))
+          )
+          _ <- EitherT.liftF[F, ApiError, E.Follower](
+            followerRepo.createFollower(
+              E.Follower(userWithId.id, input.authUser)
+            )
+          )
+        } yield mkProfile(userWithId.entity, true)
+
+        profile.value.map(_.recover({ case UserFollowingHimself(p) => p }
+        ).map(FollowUserOutput(_)))
+      }
+
+      def unfollow(
+          input: UnfollowUserInput
+      ): F[ApiResult[UnfollowUserOutput]] = {
+        val profile = for {
+          userWithId <- EitherT.fromOptionF(
+            userRepo.findUserByUsername(input.username),
+            ProfileNotFound()
+          )
+          _ <- EitherT.cond[F](
+            input.authUser != userWithId.id,
+            (),
+            UserUnfollowingHimself(mkProfile(userWithId.entity, false))
+          )
+          _ <- EitherT.liftF[F, ApiError, Unit](
+            followerRepo.deleteFollower(userWithId.id, input.authUser)
+          )
+        } yield mkProfile(userWithId.entity, false)
+
+        profile.value.map(_.recover({ case UserUnfollowingHimself(p) => p }
+        ).map(UnfollowUserOutput(_)))
+      }
     }
-
-    def follow(input: FollowUserInput): F[ApiResult[FollowUserOutput]] = {
-      val profile = for {
-        userWithId <- EitherT.fromOptionF(userRepo.findUserByUsername(input.username), ProfileNotFound())
-        _ <- EitherT.cond[F](input.authUser != userWithId.id, (), UserFollowingHimself(mkProfile(userWithId.entity, false)))
-        _ <- EitherT.liftF[F, ApiError, E.Follower](followerRepo.createFollower(E.Follower(userWithId.id, input.authUser)))
-      } yield mkProfile(userWithId.entity, true)
-
-      profile.value.map(_.recover({ case UserFollowingHimself(p) => p }).map(FollowUserOutput(_)))
-    }
-
-    def unfollow(input: UnfollowUserInput): F[ApiResult[UnfollowUserOutput]] = {
-      val profile = for {
-        userWithId <- EitherT.fromOptionF(userRepo.findUserByUsername(input.username), ProfileNotFound())
-        _ <- EitherT.cond[F](input.authUser != userWithId.id, (), UserUnfollowingHimself(mkProfile(userWithId.entity, false)))
-        _ <- EitherT.liftF[F, ApiError, Unit](followerRepo.deleteFollower(userWithId.id, input.authUser))
-      } yield mkProfile(userWithId.entity, false)
-
-      profile.value.map(_.recover({ case UserUnfollowingHimself(p) => p }).map(UnfollowUserOutput(_)))
-    }
-  }
 }

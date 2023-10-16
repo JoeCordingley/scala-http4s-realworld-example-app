@@ -25,7 +25,9 @@ object utilsTests extends TestSuite {
         slugify("abc 123 ...") ==> "abc-123"
         slugify("abc 123 .,! e123g") ==> "abc-123-e123g"
         slugify("abc\n @*& 123 .,! e123g") ==> "abc-123-e123g"
-        slugify("!@#$ abc\n \t %^&*() _ 123 .,! e123g -= _+") ==> "abc-_-123-e123g-_"
+        slugify(
+          "!@#$ abc\n \t %^&*() _ 123 .,! e123g -= _+"
+        ) ==> "abc-_-123-e123g-_"
       }
     }
 

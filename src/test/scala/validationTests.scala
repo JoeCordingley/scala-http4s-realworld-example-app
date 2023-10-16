@@ -50,7 +50,9 @@ object validationTests extends TestSuite {
       test("looks like email") {
         test("should return email if it looks like email") {
           looksLikeEmail("abc@sdf.com") ==> "abc@sdf.com".validNec
-          looksLikeEmail("abc1.232@123sdf.com") ==> "abc1.232@123sdf.com".validNec
+          looksLikeEmail(
+            "abc1.232@123sdf.com"
+          ) ==> "abc1.232@123sdf.com".validNec
           looksLikeEmail("abc1@sdf1.com.123") ==> "abc1@sdf1.com.123".validNec
         }
 

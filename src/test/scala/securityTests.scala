@@ -79,7 +79,10 @@ object securityTests extends TestSuite {
 
     def tamper(s: String): String = {
       val halfLength = s.size / 2
-      if (halfLength > 0) s.substring(0, halfLength) + ((s.charAt(halfLength).toInt + 1) % 256).toChar + s.substring(halfLength + 1)
+      if (halfLength > 0)
+        s.substring(0, halfLength) + ((s
+          .charAt(halfLength)
+          .toInt + 1) % 256).toChar + s.substring(halfLength + 1)
       else s
     }
   }

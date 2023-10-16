@@ -23,7 +23,10 @@ object TagRepo {
       Q.selectPopularTags.to[List].transact(xa)
 
     def findTags(articleIds: List[Int]): IO[List[Tag]] =
-      NonEmptyList.fromList(articleIds.distinct).map(Q.selectTags(_).to[List].transact(xa)).getOrElse(IO.pure(List.empty))
+      NonEmptyList
+        .fromList(articleIds.distinct)
+        .map(Q.selectTags(_).to[List].transact(xa))
+        .getOrElse(IO.pure(List.empty))
   }
 
   object Q {
@@ -37,7 +40,7 @@ object TagRepo {
 
     def selectTags(articleIds: NonEmptyList[Int]) = {
       val q =
-      fr"""
+        fr"""
         select article_id, tag
         from tags
         where """ ++ in(fr"article_id", articleIds)

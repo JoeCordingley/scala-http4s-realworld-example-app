@@ -11,26 +11,49 @@ import io.rw.app.data.Entities.*
 import io.rw.app.data.{ArticleFilter, Pagination}
 
 trait ArticleRepo[F[_]] {
-  def findArticleBySlug(slug: String): F[Option[(WithId[Article], WithId[User])]]
-  def findArticlesFilteredBy(filter: ArticleFilter, pagination: Pagination): F[List[(WithId[Article], WithId[User])]]
-  def findArticlesByFollower(followerId: Int, pagination: Pagination): F[List[(WithId[Article], WithId[User])]]
+  def findArticleBySlug(
+      slug: String
+  ): F[Option[(WithId[Article], WithId[User])]]
+  def findArticlesFilteredBy(
+      filter: ArticleFilter,
+      pagination: Pagination
+  ): F[List[(WithId[Article], WithId[User])]]
+  def findArticlesByFollower(
+      followerId: Int,
+      pagination: Pagination
+  ): F[List[(WithId[Article], WithId[User])]]
   def countArticlesFilteredBy(filter: ArticleFilter): F[Int]
   def countArticlesForFollower(followerId: Int): F[Int]
-  def createArticleWithTags(article: Article, tags: List[String]): F[((WithId[Article], WithId[User]), List[Tag])]
-  def updateArticleBySlug(slug: String, authorId: Int, article: ArticleForUpdate): F[Option[(WithId[Article], WithId[User])]]
+  def createArticleWithTags(
+      article: Article,
+      tags: List[String]
+  ): F[((WithId[Article], WithId[User]), List[Tag])]
+  def updateArticleBySlug(
+      slug: String,
+      authorId: Int,
+      article: ArticleForUpdate
+  ): F[Option[(WithId[Article], WithId[User])]]
   def deleteArticleBySlug(slug: String, authorId: Int): F[Option[Unit]]
 }
 
 object ArticleRepo {
 
   def impl(xa: Transactor[IO]) = new ArticleRepo[IO] {
-    def findArticleBySlug(slug: String): IO[Option[(WithId[Article], WithId[User])]] =
+    def findArticleBySlug(
+        slug: String
+    ): IO[Option[(WithId[Article], WithId[User])]] =
       Q.selectArticleBySlug(slug).option.transact(xa)
 
-    def findArticlesFilteredBy(filter: ArticleFilter, pagination: Pagination): IO[List[(WithId[Article], WithId[User])]] =
+    def findArticlesFilteredBy(
+        filter: ArticleFilter,
+        pagination: Pagination
+    ): IO[List[(WithId[Article], WithId[User])]] =
       Q.selectArticlesFilteredBy(filter, pagination).to[List].transact(xa)
 
-    def findArticlesByFollower(followerId: Int, pagination: Pagination): IO[List[(WithId[Article], WithId[User])]] =
+    def findArticlesByFollower(
+        followerId: Int,
+        pagination: Pagination
+    ): IO[List[(WithId[Article], WithId[User])]] =
       Q.selectArticlesByFollower(followerId, pagination).to[List].transact(xa)
 
     def countArticlesFilteredBy(filter: ArticleFilter): IO[Int] =
@@ -39,7 +62,10 @@ object ArticleRepo {
     def countArticlesForFollower(followerId: Int): IO[Int] =
       Q.countArticlesForFollower(followerId).unique.transact(xa)
 
-    def createArticleWithTags(article: Article, tags: List[String]): IO[((WithId[Article], WithId[User]), List[Tag])] = {
+    def createArticleWithTags(
+        article: Article,
+        tags: List[String]
+    ): IO[((WithId[Article], WithId[User]), List[Tag])] = {
       val trx = for {
         id <- Q.insertArticle(article).withUniqueGeneratedKeys[Int]("id")
         tagsEntities = tags.distinct.map(Tag(id, _))
@@ -50,17 +76,30 @@ object ArticleRepo {
       trx.transact(xa)
     }
 
-    def updateArticleBySlug(slug: String, authorId: Int, article: ArticleForUpdate): IO[Option[(WithId[Article], WithId[User])]] = {
+    def updateArticleBySlug(
+        slug: String,
+        authorId: Int,
+        article: ArticleForUpdate
+    ): IO[Option[(WithId[Article], WithId[User])]] = {
       val trx = for {
-        _ <- OptionT(Q.updateArticleBySlug(slug, authorId, article).run.map(affectedToOption))
-        article <- OptionT(Q.selectArticleBySlug(article.slug.getOrElse(slug)).option)
+        _ <- OptionT(
+          Q.updateArticleBySlug(slug, authorId, article)
+            .run
+            .map(affectedToOption)
+        )
+        article <- OptionT(
+          Q.selectArticleBySlug(article.slug.getOrElse(slug)).option
+        )
       } yield article
 
       trx.value.transact(xa)
     }
 
     def deleteArticleBySlug(slug: String, authorId: Int): IO[Option[Unit]] =
-      Q.deleteArticleBySlug(slug, authorId).run.map(affectedToOption).transact(xa)
+      Q.deleteArticleBySlug(slug, authorId)
+        .run
+        .map(affectedToOption)
+        .transact(xa)
   }
 
   object Q {
@@ -80,11 +119,14 @@ object ArticleRepo {
       q.query[(WithId[Article], WithId[User])]
     }
 
-    def selectArticlesFilteredBy(filter: ArticleFilter, pagination: Pagination) = {
+    def selectArticlesFilteredBy(
+        filter: ArticleFilter,
+        pagination: Pagination
+    ) = {
       val q =
         articleJoinUser ++
-        whereWithFilter(filter) ++
-        recentWithPagination(pagination)
+          whereWithFilter(filter) ++
+          recentWithPagination(pagination)
 
       q.query[(WithId[Article], WithId[User])]
     }
@@ -94,7 +136,7 @@ object ArticleRepo {
         articlesForFollower(followerId) ++
         recentWithPagination(pagination)
 
-        q.query[(WithId[Article], WithId[User])]
+      q.query[(WithId[Article], WithId[User])]
     }
 
     def countArticlesFilteredBy(filter: ArticleFilter) = {
@@ -130,7 +172,11 @@ object ArticleRepo {
       Update[Tag](q)
     }
 
-    def updateArticleBySlug(slug: String, authorId: Int, article: ArticleForUpdate) =
+    def updateArticleBySlug(
+        slug: String,
+        authorId: Int,
+        article: ArticleForUpdate
+    ) =
       sql"""
          update articles a
          set slug = coalesce(${article.slug}, a.slug),
@@ -158,9 +204,13 @@ object ArticleRepo {
       """
 
     def whereWithFilter(filter: ArticleFilter) = {
-      val tag = filter.tag.map(t => fr"a.id in (select distinct article_id from tags where tag = $t)")
+      val tag = filter.tag.map(t =>
+        fr"a.id in (select distinct article_id from tags where tag = $t)"
+      )
       val author = filter.author.map(a => fr"u.username = $a")
-      val favorited = filter.favorited.map(f => fr"a.id in (select distinct f.article_id from favorites f inner join users uu on f.user_id = uu.id where uu.username = $f)")
+      val favorited = filter.favorited.map(f =>
+        fr"a.id in (select distinct f.article_id from favorites f inner join users uu on f.user_id = uu.id where uu.username = $f)"
+      )
 
       whereAndOpt(tag, author, favorited)
     }

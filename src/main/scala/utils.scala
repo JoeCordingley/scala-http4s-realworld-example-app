@@ -45,10 +45,13 @@ object utils {
   def extractTokenValue(s: String): Option[String] =
     s match {
       case tokenPattern(token) => Some(token)
-      case _ => None
+      case _                   => None
     }
 
-  def mkHttpApp(appRoutes: List[AppRoutes[IO]], token: JwtToken[IO]): HttpApp[IO] = {
+  def mkHttpApp(
+      appRoutes: List[AppRoutes[IO]],
+      token: JwtToken[IO]
+  ): HttpApp[IO] = {
     val authMiddleware = AuthMiddleware(authUser[IO](token))
     val routes = authMiddleware(appRoutes.reduce(_ <+> _))
 

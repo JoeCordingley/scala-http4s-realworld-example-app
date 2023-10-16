@@ -29,14 +29,19 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
   val tests = Tests {
     test("get all") {
       test("authenticated user should get all articles") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
 
         val t = for {
           jwt <- logon(registerBody)
-          _ <- createArticleBodies.map(b => postWithToken("articles", WrappedArticleBody(b), jwt)).sequence
+          _ <- createArticleBodies
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt))
+            .sequence
           rs <- getWithToken("articles", jwt)
-          (articles, articlesCount) <- rs.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles, articlesCount) <- rs
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs.status ==> Status.Ok
           articlesCount ==> createArticleBodies.size
@@ -46,18 +51,27 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should get articles paginated") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
 
         val t = for {
           jwt <- logon(registerBody)
-          _ <- createArticleBodies.map(b => postWithToken("articles", WrappedArticleBody(b), jwt)).sequence
+          _ <- createArticleBodies
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt))
+            .sequence
           rs1 <- getWithToken(s"articles?limit=7&offset=0", jwt)
-          (articles1, articlesCount1) <- rs1.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles1, articlesCount1) <- rs1
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
           rs2 <- getWithToken(s"articles?limit=7&offset=7", jwt)
-          (articles2, articlesCount2) <- rs2.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles2, articlesCount2) <- rs2
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
           rs3 <- getWithToken(s"articles?limit=7&offset=10", jwt)
-          (articles3, articlesCount3) <- rs3.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles3, articlesCount3) <- rs3
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
@@ -74,16 +88,22 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should get articles by tag") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
         val tag = "tagAbc"
-        val createArticleBodiesWithTag = generateCreateArticleBodies(5, List(tag))
+        val createArticleBodiesWithTag =
+          generateCreateArticleBodies(5, List(tag))
 
         val t = for {
           jwt <- logon(registerBody)
-          _ <- (createArticleBodies ++ createArticleBodiesWithTag).map(b => postWithToken("articles", WrappedArticleBody(b), jwt)).sequence
+          _ <- (createArticleBodies ++ createArticleBodiesWithTag)
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt))
+            .sequence
           rs <- getWithToken(s"articles?tag=$tag", jwt)
-          (articles, articlesCount) <- rs.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles, articlesCount) <- rs
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs.status ==> Status.Ok
           articlesCount ==> createArticleBodiesWithTag.size
@@ -93,18 +113,26 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should get articles by author") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(7)
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          _ <- createArticleBodies1.map(b => postWithToken("articles", WrappedArticleBody(b), jwt1)).sequence
+          _ <- createArticleBodies1
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt1))
+            .sequence
           jwt2 <- logon(registerBody2)
-          _ <- createArticleBodies2.map(b => postWithToken("articles", WrappedArticleBody(b), jwt2)).sequence
+          _ <- createArticleBodies2
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
+            .sequence
           rs <- getWithToken(s"articles?author=${registerBody2.username}", jwt1)
-          (articles, articlesCount) <- rs.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles, articlesCount) <- rs
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs.status ==> Status.Ok
           articlesCount ==> createArticleBodies2.size
@@ -114,22 +142,40 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should get articles by favorited") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(7)
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          _ <- createArticleBodies1.map(b => postWithToken("articles", WrappedArticleBody(b), jwt1)).sequence
+          _ <- createArticleBodies1
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt1))
+            .sequence
           jwt2 <- logon(registerBody2)
-          _ <- createArticleBodies2.map(b => postWithToken("articles", WrappedArticleBody(b), jwt2)).sequence
-          rs1 <- getWithToken(s"articles?author=${registerBody2.username}", jwt1)
-          (articles, articlesCount) <- rs1.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          _ <- createArticleBodies2
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
+            .sequence
+          rs1 <- getWithToken(
+            s"articles?author=${registerBody2.username}",
+            jwt1
+          )
+          (articles, articlesCount) <- rs1
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
           favorites = articles.take(5)
-          _ <- favorites.map(a => postWithToken(s"articles/${a.slug}/favorite", jwt1)).sequence
-          rs2 <- getWithToken(s"articles?favorited=${registerBody1.username}", jwt1)
-          (articles2, articlesCount2) <- rs2.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          _ <- favorites
+            .map(a => postWithToken(s"articles/${a.slug}/favorite", jwt1))
+            .sequence
+          rs2 <- getWithToken(
+            s"articles?favorited=${registerBody1.username}",
+            jwt1
+          )
+          (articles2, articlesCount2) <- rs2
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
@@ -142,14 +188,19 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get all articles") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
 
         val t = for {
           jwt <- logon(registerBody)
-          _ <- createArticleBodies.map(b => postWithToken("articles", WrappedArticleBody(b), jwt)).sequence
+          _ <- createArticleBodies
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt))
+            .sequence
           rs <- get("articles")
-          (articles, articlesCount) <- rs.as[GetAllArticlesOutput].map(r => (r.articles, r.articlesCount))
+          (articles, articlesCount) <- rs
+            .as[GetAllArticlesOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs.status ==> Status.Ok
           articlesCount ==> createArticleBodies.size
@@ -161,19 +212,30 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("get feed") {
       test("authenticated user should get feed") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(7)
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          _ <- createArticleBodies1.map(b => postWithToken("articles", WrappedArticleBody(b), jwt1)).sequence
+          _ <- createArticleBodies1
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt1))
+            .sequence
           jwt2 <- logon(registerBody2)
-          _ <- createArticleBodies2.map(b => postWithToken("articles", WrappedArticleBody(b), jwt2)).sequence
-          rs1 <- postWithToken(s"profiles/${registerBody2.username}/follow", jwt1)
+          _ <- createArticleBodies2
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
+            .sequence
+          rs1 <- postWithToken(
+            s"profiles/${registerBody2.username}/follow",
+            jwt1
+          )
           rs2 <- getWithToken(s"articles/feed", jwt1)
-          (articles, articlesCount) <- rs2.as[GetArticlesFeedOutput].map(r => (r.articles, r.articlesCount))
+          (articles, articlesCount) <- rs2
+            .as[GetArticlesFeedOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
@@ -184,23 +246,38 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should get feed paginated") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(10)
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          _ <- createArticleBodies1.map(b => postWithToken("articles", WrappedArticleBody(b), jwt1)).sequence
+          _ <- createArticleBodies1
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt1))
+            .sequence
           jwt2 <- logon(registerBody2)
-          _ <- createArticleBodies2.map(b => postWithToken("articles", WrappedArticleBody(b), jwt2)).sequence
-          rs1 <- postWithToken(s"profiles/${registerBody2.username}/follow", jwt1)
+          _ <- createArticleBodies2
+            .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
+            .sequence
+          rs1 <- postWithToken(
+            s"profiles/${registerBody2.username}/follow",
+            jwt1
+          )
           rs2 <- getWithToken(s"articles/feed?limit=7&offset=0", jwt1)
-          (articles1, articlesCount1) <- rs2.as[GetArticlesFeedOutput].map(r => (r.articles, r.articlesCount))
+          (articles1, articlesCount1) <- rs2
+            .as[GetArticlesFeedOutput]
+            .map(r => (r.articles, r.articlesCount))
           rs3 <- getWithToken(s"articles/feed?limit=7&offset=7", jwt1)
-          (articles2, articlesCount2) <- rs3.as[GetArticlesFeedOutput].map(r => (r.articles, r.articlesCount))
+          (articles2, articlesCount2) <- rs3
+            .as[GetArticlesFeedOutput]
+            .map(r => (r.articles, r.articlesCount))
           rs4 <- getWithToken(s"articles/feed?limit=7&offset=10", jwt1)
-          (articles3, articlesCount3) <- rs4.as[GetArticlesFeedOutput].map(r => (r.articles, r.articlesCount))
+          (articles3, articlesCount3) <- rs4
+            .as[GetArticlesFeedOutput]
+            .map(r => (r.articles, r.articlesCount))
         } yield {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
@@ -230,12 +307,22 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("get") {
       test("authenticated user should get article by slug") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(r => r.article.slug)
           rs2 <- getWithToken(s"articles/$slug", jwt)
         } yield {
@@ -245,8 +332,11 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -259,12 +349,22 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get article by slug") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(r => r.article.slug)
           rs2 <- get(s"articles/$slug")
         } yield {
@@ -277,12 +377,22 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("create") {
       test("authenticated user should create article") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           article <- rs.as[CreateArticleOutput].map(_.article)
         } yield {
           rs.status ==> Status.Ok
@@ -299,15 +409,34 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should create article with the same title") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody1 = CreateArticleBody("title", "description1", "body1", Some(List("tag1", "tag2", "tag3")))
-        val createArticleBody2 = CreateArticleBody("title", "description2", "body2", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody1 = CreateArticleBody(
+          "title",
+          "description1",
+          "body1",
+          Some(List("tag1", "tag2", "tag3"))
+        )
+        val createArticleBody2 = CreateArticleBody(
+          "title",
+          "description2",
+          "body2",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody1), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody1),
+            jwt
+          )
           article1 <- rs1.as[CreateArticleOutput].map(_.article)
-          rs2 <- postWithToken("articles", WrappedArticleBody(createArticleBody2), jwt)
+          rs2 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody2),
+            jwt
+          )
           article2 <- rs2.as[CreateArticleOutput].map(_.article)
         } yield {
           rs1.status ==> Status.Ok
@@ -316,7 +445,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           article1.body ==> createArticleBody1.body
           article1.favoritesCount ==> 0
           article1.favorited ==> false
-          Some(article1.tagList.toSet) ==> createArticleBody1.tagList.map(_.toSet)
+          Some(article1.tagList.toSet) ==> createArticleBody1.tagList.map(
+            _.toSet
+          )
           article1.author.username ==> registerBody.username
           rs2.status ==> Status.Ok
           article2.title ==> createArticleBody2.title
@@ -324,20 +455,30 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           article2.body ==> createArticleBody2.body
           article2.favoritesCount ==> 0
           article2.favorited ==> false
-          Some(article2.tagList.toSet) ==> createArticleBody2.tagList.map(_.toSet)
+          Some(article2.tagList.toSet) ==> createArticleBody2.tagList.map(
+            _.toSet
+          )
           article2.author.username ==> registerBody.username
         }
 
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get errors when creating article with invalid title, body or description") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("", "", "", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get errors when creating article with invalid title, body or description"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody =
+          CreateArticleBody("", "", "", Some(List("tag1", "tag2", "tag3")))
 
         val t = for {
           jwt <- logon(registerBody)
-          rs <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           errors <- rs.as[ValidationErrorResponse].map(_.errors)
         } yield {
           rs.status ==> Status.UnprocessableEntity
@@ -351,7 +492,12 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get error") {
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           rs <- post("articles", WrappedArticleBody(createArticleBody))
@@ -365,15 +511,33 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("update") {
       test("authenticated user should update article") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
-        val updateArticleBody = UpdateArticleBody(Some("newTitle"), Some("newDescription"), Some("newBody"))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
+        val updateArticleBody = UpdateArticleBody(
+          Some("newTitle"),
+          Some("newDescription"),
+          Some("newBody")
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- putWithToken(s"articles/$slug", WrappedArticleBody(updateArticleBody), jwt)
+          rs2 <- putWithToken(
+            s"articles/$slug",
+            WrappedArticleBody(updateArticleBody),
+            jwt
+          )
           article <- rs2.as[UpdateArticleOutput].map(_.article)
         } yield {
           rs1.status ==> Status.Ok
@@ -390,16 +554,32 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get errors when updating article with invalid title, body or description") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get errors when updating article with invalid title, body or description"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val updateArticleBody = UpdateArticleBody(Some(""), Some(""), Some(""))
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- putWithToken(s"articles/$slug", WrappedArticleBody(updateArticleBody), jwt)
+          rs2 <- putWithToken(
+            s"articles/$slug",
+            WrappedArticleBody(updateArticleBody),
+            jwt
+          )
           errors <- rs2.as[ValidationErrorResponse].map(_.errors)
         } yield {
           rs1.status ==> Status.Ok
@@ -413,13 +593,24 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when updating non existing article") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val updateArticleBody = UpdateArticleBody(Some("newTitle"), Some("newDescription"), Some("newBody"))
+      test(
+        "authenticated user should get not found when updating non existing article"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val updateArticleBody = UpdateArticleBody(
+          Some("newTitle"),
+          Some("newDescription"),
+          Some("newBody")
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs <- putWithToken("articles/non-existing-slug", WrappedArticleBody(updateArticleBody), jwt)
+          rs <- putWithToken(
+            "articles/non-existing-slug",
+            WrappedArticleBody(updateArticleBody),
+            jwt
+          )
         } yield {
           rs.status ==> Status.NotFound
         }
@@ -427,18 +618,39 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when updating another's article") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
-        val updateArticleBody = UpdateArticleBody(Some("newTitle"), Some("newDescription"), Some("newBody"))
+      test(
+        "authenticated user should get not found when updating another's article"
+      ) {
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
+        val updateArticleBody = UpdateArticleBody(
+          Some("newTitle"),
+          Some("newDescription"),
+          Some("newBody")
+        )
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
-          rs2 <- putWithToken(s"articles/$slug", WrappedArticleBody(updateArticleBody), jwt2)
+          rs2 <- putWithToken(
+            s"articles/$slug",
+            WrappedArticleBody(updateArticleBody),
+            jwt2
+          )
         } yield {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.NotFound
@@ -448,7 +660,8 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get error") {
-        val updateArticleBody = UpdateArticleBody(Some("newTitle"), Some(""), Some(""))
+        val updateArticleBody =
+          UpdateArticleBody(Some("newTitle"), Some(""), Some(""))
 
         val t = for {
           rs <- put("articles/slug", WrappedArticleBody(updateArticleBody))
@@ -462,12 +675,22 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("delete") {
       test("authenticated user should delete article") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           rs2 <- deleteWithToken(s"articles/$slug", jwt)
           rs3 <- getWithToken(s"articles/$slug", jwt)
@@ -480,8 +703,11 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -493,14 +719,27 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when deleting another's article") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get not found when deleting another's article"
+      ) {
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
           rs2 <- deleteWithToken(s"articles/$slug", jwt2)
@@ -527,14 +766,26 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("favorite") {
       test("authenticated user should favorite article") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val registerBody3 = RegisterUserBody("username3", "email3@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val registerBody3 =
+          RegisterUserBody("username3", "email3@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
           rs2 <- postWithToken(s"articles/$slug/favorite", jwt2)
@@ -556,13 +807,24 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should favorite article twice") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
           rs2 <- postWithToken(s"articles/$slug/favorite", jwt2)
@@ -582,8 +844,11 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -608,13 +873,24 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("unfavorite") {
       test("authenticated user should unfavorite article") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
           rs2 <- postWithToken(s"articles/$slug/favorite", jwt2)
@@ -635,13 +911,24 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should unfavorite article twice") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
           rs2 <- postWithToken(s"articles/$slug/favorite", jwt2)
@@ -666,8 +953,11 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -690,12 +980,18 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
     }
 
-    def generateCreateArticleBodies(n: Int, tags: List[String] = List.empty): List[CreateArticleBody] =
+    def generateCreateArticleBodies(
+        n: Int,
+        tags: List[String] = List.empty
+    ): List[CreateArticleBody] =
       List.fill(n) {
         val title = Random.shuffle("articletitle").mkString
         val description = Random.shuffle("articledescription").mkString
         val body = Random.shuffle("articlebody").mkString
-        val tagList = if (tags.isEmpty) List("tag1", "tag2", "tag3", "tag4").map(Random.shuffle(_).mkString) else tags
+        val tagList =
+          if (tags.isEmpty)
+            List("tag1", "tag2", "tag3", "tag4").map(Random.shuffle(_).mkString)
+          else tags
         CreateArticleBody(title, description, body, Some(tagList))
       }
 
@@ -709,8 +1005,20 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       val favoriteRepo = FavoriteRepo.impl(xa)
       val userApis = UserApis.impl(passwordHasher, token, userRepo)
       val profileApis = ProfileApis.impl(userRepo, followerRepo)
-      val articleApis = ArticleApis.impl(articleRepo, followerRepo, tagRepo, favoriteRepo, idHasher)
-      mkApp(List(UserRoutes(userApis), ProfileRoutes(profileApis), ArticleRoutes(articleApis)))
+      val articleApis = ArticleApis.impl(
+        articleRepo,
+        followerRepo,
+        tagRepo,
+        favoriteRepo,
+        idHasher
+      )
+      mkApp(
+        List(
+          UserRoutes(userApis),
+          ProfileRoutes(profileApis),
+          ArticleRoutes(articleApis)
+        )
+      )
     }
   }
 }

@@ -27,10 +27,32 @@ object UserRepo {
       Q.selectUserByUsername(username).option.transact(xa)
 
     def createUser(user: User): IO[WithId[User]] =
-      Q.insertUser(user).withUniqueGeneratedKeys[WithId[User]]("id", "email", "username", "password", "bio", "image", "created_at", "updated_at").transact(xa)
+      Q.insertUser(user)
+        .withUniqueGeneratedKeys[WithId[User]](
+          "id",
+          "email",
+          "username",
+          "password",
+          "bio",
+          "image",
+          "created_at",
+          "updated_at"
+        )
+        .transact(xa)
 
     def updateUser(id: Int, user: UserForUpdate): IO[WithId[User]] =
-      Q.updateUser(id, user).withUniqueGeneratedKeys[WithId[User]]("id", "email", "username", "password", "bio", "image", "created_at", "updated_at").transact(xa)
+      Q.updateUser(id, user)
+        .withUniqueGeneratedKeys[WithId[User]](
+          "id",
+          "email",
+          "username",
+          "password",
+          "bio",
+          "image",
+          "created_at",
+          "updated_at"
+        )
+        .transact(xa)
   }
 
   object Q {
@@ -74,4 +96,3 @@ object UserRepo {
       """.update
   }
 }
-

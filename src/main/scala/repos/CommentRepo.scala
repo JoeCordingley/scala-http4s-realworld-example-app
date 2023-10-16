@@ -7,15 +7,23 @@ import doobie.implicits.legacy.instant.*
 import io.rw.app.data.Entities.*
 
 trait CommentRepo[F[_]] {
-  def findCommentsByArticleId(articleId: Int): F[List[(WithId[Comment], WithId[User])]]
+  def findCommentsByArticleId(
+      articleId: Int
+  ): F[List[(WithId[Comment], WithId[User])]]
   def createComment(comment: Comment): F[(WithId[Comment], WithId[User])]
-  def deleteComment(commentId: Int, articleId: Int, authorId: Int): F[Option[Unit]]
+  def deleteComment(
+      commentId: Int,
+      articleId: Int,
+      authorId: Int
+  ): F[Option[Unit]]
 }
 
 object CommentRepo {
 
   def impl(xa: Transactor[IO]) = new CommentRepo[IO] {
-    def findCommentsByArticleId(articleId: Int): IO[List[(WithId[Comment], WithId[User])]] =
+    def findCommentsByArticleId(
+        articleId: Int
+    ): IO[List[(WithId[Comment], WithId[User])]] =
       Q.selectCommentsByArticleId(articleId).to[List].transact(xa)
 
     def createComment(comment: Comment): IO[(WithId[Comment], WithId[User])] = {
@@ -27,8 +35,15 @@ object CommentRepo {
       trx.transact(xa)
     }
 
-    def deleteComment(commentId: Int, articleId: Int, authorId: Int): IO[Option[Unit]] =
-      Q.deleteComment(commentId, articleId, authorId).run.map(affectedToOption).transact(xa)
+    def deleteComment(
+        commentId: Int,
+        articleId: Int,
+        authorId: Int
+    ): IO[Option[Unit]] =
+      Q.deleteComment(commentId, articleId, authorId)
+        .run
+        .map(affectedToOption)
+        .transact(xa)
 
   }
 

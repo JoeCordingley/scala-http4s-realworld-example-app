@@ -19,7 +19,7 @@ import tsec.mac.jca.HMACSHA256
 
 package object routes {
 
-import io.rw.app.data.RequestBodies.RegisterUserBody
+  import io.rw.app.data.RequestBodies.RegisterUserBody
 
   val key = HMACSHA256.unsafeBuildKey("secret_key".getBytes)
   val token = JwtToken.impl(key, 60)
@@ -31,7 +31,9 @@ import io.rw.app.data.RequestBodies.RegisterUserBody
     runRq(rq)
   }
 
-  def getWithToken(path: String, jwt: String)(implicit app: HttpApp[IO]): IO[Response[IO]] = {
+  def getWithToken(path: String, jwt: String)(implicit
+      app: HttpApp[IO]
+  ): IO[Response[IO]] = {
     val rq = Request[IO](method = Method.GET, uri = mkApiUri(path))
     runRq(withToken(rq, jwt))
   }
@@ -41,28 +43,46 @@ import io.rw.app.data.RequestBodies.RegisterUserBody
     runRq(rq)
   }
 
-  def post[B](path: String, entity: B)(implicit app: HttpApp[IO], encoder: Encoder[B]): IO[Response[IO]] = {
-    val rq = Request[IO](method = Method.POST, uri = mkApiUri(path)).withEntity(entity)
+  def post[B](path: String, entity: B)(implicit
+      app: HttpApp[IO],
+      encoder: Encoder[B]
+  ): IO[Response[IO]] = {
+    val rq =
+      Request[IO](method = Method.POST, uri = mkApiUri(path)).withEntity(entity)
     runRq(rq)
   }
 
-  def postWithToken[B](path: String, jwt: String)(implicit app: HttpApp[IO]): IO[Response[IO]] = {
+  def postWithToken[B](path: String, jwt: String)(implicit
+      app: HttpApp[IO]
+  ): IO[Response[IO]] = {
     val rq = Request[IO](method = Method.POST, uri = mkApiUri(path))
     runRq(withToken(rq, jwt))
   }
 
-  def postWithToken[B](path: String, entity: B, jwt: String)(implicit app: HttpApp[IO], encoder: Encoder[B]): IO[Response[IO]] = {
-    val rq = Request[IO](method = Method.POST, uri = mkApiUri(path)).withEntity(entity)
+  def postWithToken[B](path: String, entity: B, jwt: String)(implicit
+      app: HttpApp[IO],
+      encoder: Encoder[B]
+  ): IO[Response[IO]] = {
+    val rq =
+      Request[IO](method = Method.POST, uri = mkApiUri(path)).withEntity(entity)
     runRq(withToken(rq, jwt))
   }
 
-  def put[B](path: String, entity: B)(implicit app: HttpApp[IO], encoder: Encoder[B]): IO[Response[IO]] = {
-    val rq = Request[IO](method = Method.PUT, uri = mkApiUri(path)).withEntity(entity)
+  def put[B](path: String, entity: B)(implicit
+      app: HttpApp[IO],
+      encoder: Encoder[B]
+  ): IO[Response[IO]] = {
+    val rq =
+      Request[IO](method = Method.PUT, uri = mkApiUri(path)).withEntity(entity)
     runRq(rq)
   }
 
-  def putWithToken[B](path: String, entity: B, jwt: String)(implicit app: HttpApp[IO], encoder: Encoder[B]): IO[Response[IO]] = {
-    val rq = Request[IO](method = Method.PUT, uri = mkApiUri(path)).withEntity(entity)
+  def putWithToken[B](path: String, entity: B, jwt: String)(implicit
+      app: HttpApp[IO],
+      encoder: Encoder[B]
+  ): IO[Response[IO]] = {
+    val rq =
+      Request[IO](method = Method.PUT, uri = mkApiUri(path)).withEntity(entity)
     runRq(withToken(rq, jwt))
   }
 
@@ -71,7 +91,9 @@ import io.rw.app.data.RequestBodies.RegisterUserBody
     runRq(rq)
   }
 
-  def deleteWithToken(path: String, jwt: String)(implicit app: HttpApp[IO]): IO[Response[IO]] = {
+  def deleteWithToken(path: String, jwt: String)(implicit
+      app: HttpApp[IO]
+  ): IO[Response[IO]] = {
     val rq = Request[IO](method = Method.DELETE, uri = mkApiUri(path))
     runRq(withToken(rq, jwt))
   }

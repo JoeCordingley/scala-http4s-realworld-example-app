@@ -28,17 +28,32 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
 
     test("add") {
       test("authenticated user should add comment to other's article") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           jwt2 <- logon(registerBody2)
-          rs2 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody), jwt2)
+          rs2 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt2
+          )
           comment <- rs2.as[AddCommentOutput].map(_.comment)
         } yield {
           rs1.status ==> Status.Ok
@@ -51,15 +66,29 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should add comment to its own article") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody), jwt)
+          rs2 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt
+          )
           comment <- rs2.as[AddCommentOutput].map(_.comment)
         } yield {
           rs1.status ==> Status.Ok
@@ -72,18 +101,36 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should add multiple comments article") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody1 = AddCommentBody("some comment 1")
         val addCommentBody2 = AddCommentBody("some comment 2")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody1), jwt)
+          rs2 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody1),
+            jwt
+          )
           comment1 <- rs2.as[AddCommentOutput].map(_.comment)
-          rs3 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody2), jwt)
+          rs3 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody2),
+            jwt
+          )
           comment2 <- rs3.as[AddCommentOutput].map(_.comment)
         } yield {
           rs1.status ==> Status.Ok
@@ -99,20 +146,47 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should add comments to different articles") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody1 = CreateArticleBody("title1", "description1", "body1", Some(List("tag1", "tag2", "tag3")))
-        val createArticleBody2 = CreateArticleBody("title2", "description2", "body2", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody1 = CreateArticleBody(
+          "title1",
+          "description1",
+          "body1",
+          Some(List("tag1", "tag2", "tag3"))
+        )
+        val createArticleBody2 = CreateArticleBody(
+          "title2",
+          "description2",
+          "body2",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody1), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody1),
+            jwt
+          )
           slug1 <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- postWithToken("articles", WrappedArticleBody(createArticleBody1), jwt)
+          rs2 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody1),
+            jwt
+          )
           slug2 <- rs2.as[CreateArticleOutput].map(_.article.slug)
-          rs3 <- postWithToken(s"articles/$slug1/comments", WrappedCommentBody(addCommentBody), jwt)
+          rs3 <- postWithToken(
+            s"articles/$slug1/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt
+          )
           comment1 <- rs3.as[AddCommentOutput].map(_.comment)
-          rs4 <- postWithToken(s"articles/$slug2/comments", WrappedCommentBody(addCommentBody), jwt)
+          rs4 <- postWithToken(
+            s"articles/$slug2/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt
+          )
           comment2 <- rs4.as[AddCommentOutput].map(_.comment)
         } yield {
           rs1.status ==> Status.Ok
@@ -128,16 +202,32 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get errors when adding comment with invalid body") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get errors when adding comment with invalid body"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody = AddCommentBody("")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody), jwt)
+          rs2 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt
+          )
           errors <- rs2.as[ValidationErrorResponse].map(_.errors)
         } yield {
           rs1.status ==> Status.Ok
@@ -149,13 +239,20 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs <- postWithToken("articles/non-existing-slug/comments", WrappedCommentBody(addCommentBody), jwt)
+          rs <- postWithToken(
+            "articles/non-existing-slug/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt
+          )
         } yield {
           rs.status ==> Status.NotFound
         }
@@ -167,7 +264,10 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
-          rs <- post("articles/slug1/comments", WrappedCommentBody(addCommentBody))
+          rs <- post(
+            "articles/slug1/comments",
+            WrappedCommentBody(addCommentBody)
+          )
         } yield {
           rs.status ==> Status.Unauthorized
         }
@@ -178,15 +278,33 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
 
     test("get") {
       test("authenticated user should get all comments") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBodies = generateAddCommentBodies(10)
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          _ <- addCommentBodies.map(b => postWithToken(s"articles/$slug/comments", WrappedCommentBody(b), jwt)).sequence
+          _ <- addCommentBodies
+            .map(b =>
+              postWithToken(
+                s"articles/$slug/comments",
+                WrappedCommentBody(b),
+                jwt
+              )
+            )
+            .sequence
           rs2 <- getWithToken(s"articles/$slug/comments", jwt)
           comments <- rs2.as[GetCommentsOutput].map(_.comments)
         } yield {
@@ -198,13 +316,25 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get zero comments when article is not commented yet") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get zero comments when article is not commented yet"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           rs2 <- getWithToken(s"articles/$slug/comments", jwt)
           comments <- rs2.as[GetCommentsOutput].map(_.comments)
@@ -217,8 +347,11 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -231,15 +364,33 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get all comments") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBodies = generateAddCommentBodies(10)
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          _ <- addCommentBodies.map(b => postWithToken(s"articles/$slug/comments", WrappedCommentBody(b), jwt)).sequence
+          _ <- addCommentBodies
+            .map(b =>
+              postWithToken(
+                s"articles/$slug/comments",
+                WrappedCommentBody(b),
+                jwt
+              )
+            )
+            .sequence
           rs2 <- get(s"articles/$slug/comments")
           comments <- rs2.as[GetCommentsOutput].map(_.comments)
         } yield {
@@ -254,15 +405,29 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
 
     test("delete") {
       test("authenticated user should delete comment") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody), jwt)
+          rs2 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt
+          )
           comment <- rs2.as[AddCommentOutput].map(_.comment)
           rs3 <- deleteWithToken(s"articles/$slug/comments/${comment.id}", jwt)
         } yield {
@@ -274,13 +439,25 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when comment does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get not found when comment does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
 
         val t = for {
           jwt <- logon(registerBody)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
           rs2 <- deleteWithToken(s"articles/$slug/comments/123", jwt)
         } yield {
@@ -291,17 +468,34 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when deleting another's comment") {
-        val registerBody1 = RegisterUserBody("username1", "email1@email.com", "password123")
-        val registerBody2 = RegisterUserBody("username2", "email2@email.com", "password123")
-        val createArticleBody = CreateArticleBody("title", "description", "body", Some(List("tag1", "tag2", "tag3")))
+      test(
+        "authenticated user should get not found when deleting another's comment"
+      ) {
+        val registerBody1 =
+          RegisterUserBody("username1", "email1@email.com", "password123")
+        val registerBody2 =
+          RegisterUserBody("username2", "email2@email.com", "password123")
+        val createArticleBody = CreateArticleBody(
+          "title",
+          "description",
+          "body",
+          Some(List("tag1", "tag2", "tag3"))
+        )
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
           jwt1 <- logon(registerBody1)
-          rs1 <- postWithToken("articles", WrappedArticleBody(createArticleBody), jwt1)
+          rs1 <- postWithToken(
+            "articles",
+            WrappedArticleBody(createArticleBody),
+            jwt1
+          )
           slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- postWithToken(s"articles/$slug/comments", WrappedCommentBody(addCommentBody), jwt1)
+          rs2 <- postWithToken(
+            s"articles/$slug/comments",
+            WrappedCommentBody(addCommentBody),
+            jwt1
+          )
           comment <- rs2.as[AddCommentOutput].map(_.comment)
           jwt2 <- logon(registerBody2)
           rs3 <- deleteWithToken(s"articles/$slug/comments/${comment.id}", jwt2)
@@ -314,8 +508,11 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
 
-      test("authenticated user should get not found when article does not exist") {
-        val registerBody = RegisterUserBody("username", "email@email.com", "password123")
+      test(
+        "authenticated user should get not found when article does not exist"
+      ) {
+        val registerBody =
+          RegisterUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -338,7 +535,10 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
       }
     }
 
-    def generateAddCommentBodies(n: Int, tags: List[String] = List.empty): List[AddCommentBody] =
+    def generateAddCommentBodies(
+        n: Int,
+        tags: List[String] = List.empty
+    ): List[AddCommentBody] =
       List.fill(n) {
         val body = Random.shuffle("comment").mkString
         AddCommentBody(body)
@@ -354,9 +554,21 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
       val favoriteRepo = FavoriteRepo.impl(xa)
       val commentRepo = CommentRepo.impl(xa)
       val userApis = UserApis.impl(passwordHasher, token, userRepo)
-      val articleApis = ArticleApis.impl(articleRepo, followerRepo, tagRepo, favoriteRepo, idHasher)
+      val articleApis = ArticleApis.impl(
+        articleRepo,
+        followerRepo,
+        tagRepo,
+        favoriteRepo,
+        idHasher
+      )
       val commentApis = CommentApis.impl(commentRepo, articleRepo, followerRepo)
-      mkApp(List(UserRoutes(userApis), ArticleRoutes(articleApis), CommentRoutes(commentApis)))
+      mkApp(
+        List(
+          UserRoutes(userApis),
+          ArticleRoutes(articleApis),
+          CommentRoutes(commentApis)
+        )
+      )
     }
   }
 }

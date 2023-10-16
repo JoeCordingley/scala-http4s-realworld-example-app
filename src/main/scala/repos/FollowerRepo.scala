@@ -12,7 +12,9 @@ import io.rw.app.data.Entities.*
 trait FollowerRepo[F[_]] {
   def findFollowers(followeeIds: List[Int], followerId: Int): F[List[Follower]]
 
-  def findFollower(followeeId: Int, followerId: Int)(implicit Fun: Functor[F]): F[Option[Follower]] =
+  def findFollower(followeeId: Int, followerId: Int)(implicit
+      Fun: Functor[F]
+  ): F[Option[Follower]] =
     Fun.map(findFollowers(List(followeeId), followerId))(_.headOption)
 
   def createFollower(follower: Follower): F[Follower]
@@ -22,8 +24,14 @@ trait FollowerRepo[F[_]] {
 object FollowerRepo {
 
   def impl(xa: Transactor[IO]) = new FollowerRepo[IO] {
-    def findFollowers(followeeIds: List[Int], followerId: Int): IO[List[Follower]] =
-      NonEmptyList.fromList(followeeIds.distinct).map(Q.selectFollowers(_, followerId).to[List].transact(xa)).getOrElse(IO.pure(List.empty))
+    def findFollowers(
+        followeeIds: List[Int],
+        followerId: Int
+    ): IO[List[Follower]] =
+      NonEmptyList
+        .fromList(followeeIds.distinct)
+        .map(Q.selectFollowers(_, followerId).to[List].transact(xa))
+        .getOrElse(IO.pure(List.empty))
 
     def createFollower(follower: Follower): IO[Follower] =
       Q.insertFollower(follower).run.map(_ => follower).transact(xa)
@@ -39,7 +47,7 @@ object FollowerRepo {
           select followee_id, follower_id
           from followers
           where """ ++ in(fr"followee_id", followeeIds) ++
-        fr"""
+          fr"""
                 and follower_id = $followerId
         """
       q.query[Follower]

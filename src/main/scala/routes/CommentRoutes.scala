@@ -14,7 +14,7 @@ import org.http4s.dsl.Http4sDsl
 
 object CommentRoutes {
 
-  def apply[F[_] : Async](comments: CommentApis[F]): AppRoutes[F] = {
+  def apply[F[_]: Async](comments: CommentApis[F]): AppRoutes[F] = {
 
     implicit val dsl = Http4sDsl.apply[F]
     import dsl.*
@@ -25,7 +25,9 @@ object CommentRoutes {
           body <- rq.req.as[WrappedCommentBody[AddCommentBody]]
           rs <- withAuthUser(authUser) { u =>
             withValidation(validAddCommentBody(body.comment)) { valid =>
-              comments.add(AddCommentInput(u, slug, valid.body)).flatMap(toResponse(_))
+              comments
+                .add(AddCommentInput(u, slug, valid.body))
+                .flatMap(toResponse(_))
             }
           }
         } yield rs
@@ -33,9 +35,13 @@ object CommentRoutes {
       case GET -> Root / "articles" / slug / "comments" as authUser =>
         comments.get(GetCommentsInput(authUser, slug)).flatMap(toResponse(_))
 
-      case DELETE -> Root / "articles" / slug / "comments" / IntVar(commentId) as authUser =>
+      case DELETE -> Root / "articles" / slug / "comments" / IntVar(
+            commentId
+          ) as authUser =>
         withAuthUser(authUser) { u =>
-          comments.delete(DeleteCommentInput(u, slug, commentId)).flatMap(toResponse(_))
+          comments
+            .delete(DeleteCommentInput(u, slug, commentId))
+            .flatMap(toResponse(_))
         }
     }
   }

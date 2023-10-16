@@ -14,14 +14,13 @@ import org.http4s.dsl.Http4sDsl
 
 object TagRoutes {
 
-  def apply[F[_] : Sync](tags: TagApis[F]): AppRoutes[F] = {
+  def apply[F[_]: Sync](tags: TagApis[F]): AppRoutes[F] = {
 
     implicit val dsl = Http4sDsl.apply[F]
     import dsl.*
 
-    AuthedRoutes.of[Option[AuthUser], F] {
-      case GET -> Root / "tags" as _ =>
-        tags.get(GetTagsInput()).flatMap(toResponse(_))
+    AuthedRoutes.of[Option[AuthUser], F] { case GET -> Root / "tags" as _ =>
+      tags.get(GetTagsInput()).flatMap(toResponse(_))
     }
   }
 }

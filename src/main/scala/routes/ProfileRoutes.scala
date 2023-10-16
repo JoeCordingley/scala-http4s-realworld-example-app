@@ -14,7 +14,7 @@ import org.http4s.dsl.Http4sDsl
 
 object ProfileRoutes {
 
-  def apply[F[_] : Sync](profiles: ProfileApis[F]): AppRoutes[F] = {
+  def apply[F[_]: Sync](profiles: ProfileApis[F]): AppRoutes[F] = {
 
     implicit val dsl = Http4sDsl.apply[F]
     import dsl.*
@@ -30,7 +30,9 @@ object ProfileRoutes {
 
       case DELETE -> Root / "profiles" / username / "follow" as authUser =>
         withAuthUser(authUser) { u =>
-          profiles.unfollow(UnfollowUserInput(u, username)).flatMap(toResponse(_))
+          profiles
+            .unfollow(UnfollowUserInput(u, username))
+            .flatMap(toResponse(_))
         }
     }
   }

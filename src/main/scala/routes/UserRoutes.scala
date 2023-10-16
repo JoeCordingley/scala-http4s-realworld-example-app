@@ -24,7 +24,9 @@ object UserRoutes {
         for {
           body <- rq.req.as[WrappedUserBody[AuthenticateUserBody]]
           rs <- withValidation(validAuthenticateUserBody(body.user)) { valid =>
-            users.authenticate(AuthenticateUserInput(valid.email, valid.password)).flatMap(toResponse(_))
+            users
+              .authenticate(AuthenticateUserInput(valid.email, valid.password))
+              .flatMap(toResponse(_))
           }
         } yield rs
 
@@ -32,7 +34,11 @@ object UserRoutes {
         for {
           body <- rq.req.as[WrappedUserBody[RegisterUserBody]]
           rs <- withValidation(validRegisterUserBody(body.user)) { valid =>
-            users.register(RegisterUserInput(valid.username, valid.email, valid.password)).flatMap(toResponse(_))
+            users
+              .register(
+                RegisterUserInput(valid.username, valid.email, valid.password)
+              )
+              .flatMap(toResponse(_))
           }
         } yield rs
 
@@ -46,7 +52,18 @@ object UserRoutes {
           body <- rq.req.as[WrappedUserBody[UpdateUserBody]]
           rs <- withAuthUser(authUser) { u =>
             withValidation(validUpdateUserBody(body.user)) { valid =>
-              users.update(UpdateUserInput(u, valid.username, valid.email, valid.password, valid.bio, valid.image)).flatMap(toResponse(_))
+              users
+                .update(
+                  UpdateUserInput(
+                    u,
+                    valid.username,
+                    valid.email,
+                    valid.password,
+                    valid.bio,
+                    valid.image
+                  )
+                )
+                .flatMap(toResponse(_))
             }
           }
         } yield rs

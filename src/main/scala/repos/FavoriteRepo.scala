@@ -12,7 +12,9 @@ import io.rw.app.data.Entities.*
 trait FavoriteRepo[F[_]] {
   def findFavorites(articleIds: List[Int], userId: Int): F[List[Favorite]]
 
-  def findFavorite(articleId: Int, userId: Int)(implicit Fun: Functor[F]): F[Option[Favorite]] =
+  def findFavorite(articleId: Int, userId: Int)(implicit
+      Fun: Functor[F]
+  ): F[Option[Favorite]] =
     Fun.map(findFavorites(List(articleId), userId))(_.headOption)
 
   def countFavorites(articleIds: List[Int]): F[List[(Int, Int)]]
@@ -29,10 +31,16 @@ object FavoriteRepo {
 
   def impl(xa: Transactor[IO]) = new FavoriteRepo[IO] {
     def findFavorites(articleIds: List[Int], userId: Int): IO[List[Favorite]] =
-      NonEmptyList.fromList(articleIds.distinct).map(Q.selectFavorites(_, userId).to[List].transact(xa)).getOrElse(IO.pure(List.empty))
+      NonEmptyList
+        .fromList(articleIds.distinct)
+        .map(Q.selectFavorites(_, userId).to[List].transact(xa))
+        .getOrElse(IO.pure(List.empty))
 
     def countFavorites(articleIds: List[Int]): IO[List[(Int, Int)]] =
-      NonEmptyList.fromList(articleIds.distinct).map(Q.countFavorites(_).to[List].transact(xa)).getOrElse(IO.pure(List.empty))
+      NonEmptyList
+        .fromList(articleIds.distinct)
+        .map(Q.countFavorites(_).to[List].transact(xa))
+        .getOrElse(IO.pure(List.empty))
 
     def createFavorite(favorite: Favorite): IO[Favorite] =
       Q.insertFavorite(favorite).run.map(_ => favorite).transact(xa)
@@ -48,7 +56,7 @@ object FavoriteRepo {
           select article_id, user_id
           from favorites
           where """ ++ in(fr"article_id", articleIds) ++
-        fr"""
+          fr"""
                 and user_id = $userId
         """
       q.query[Favorite]
@@ -60,7 +68,7 @@ object FavoriteRepo {
           select article_id, count(1)
           from favorites
           where """ ++ in(fr"article_id", articleIds) ++
-        fr"""
+          fr"""
           group by article_id
         """
       q.query[(Int, Int)]

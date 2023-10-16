@@ -15,7 +15,7 @@ trait TagApis[F[_]] {
 
 object TagApis {
 
-  def impl[F[_] : Monad](tagRepo: TagRepo[F]) = new TagApis[F] {
+  def impl[F[_]: Monad](tagRepo: TagRepo[F]) = new TagApis[F] {
     def get(input: GetTagsInput): F[ApiResult[GetTagsOutput]] =
       tagRepo.findPopularTags().map(tags => Right(GetTagsOutput(tags)))
   }
