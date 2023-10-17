@@ -309,12 +309,11 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
     }
-
-    implicit val app: HttpApp[IO] = {
-      val passwordHasher = PasswordHasher.impl
-      val userRepo = UserRepo.impl(xa)
-      val apis = UserApis.impl(passwordHasher, token, userRepo)
-      mkApp(List(UserRoutes(apis)))
-    }
+  }
+  implicit val app: HttpApp[IO] = {
+    val passwordHasher = PasswordHasher.impl
+    val userRepo = UserRepo.impl(xa)
+    val apis = UserApis.impl(passwordHasher, token, userRepo)
+    mkApp(List(UserRoutes(apis)))
   }
 }

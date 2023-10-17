@@ -8,6 +8,7 @@ import utest.*
 import cats.effect.unsafe.implicits.global
 
 object securityTests extends TestSuite {
+
   val tests = Tests {
     test("test hashed password") {
       val passwordHasher = PasswordHasher.impl
@@ -76,14 +77,14 @@ object securityTests extends TestSuite {
         t.unsafeRunSync()
       }
     }
+  }
 
-    def tamper(s: String): String = {
-      val halfLength = s.size / 2
-      if (halfLength > 0)
-        s.substring(0, halfLength) + ((s
-          .charAt(halfLength)
-          .toInt + 1) % 256).toChar + s.substring(halfLength + 1)
-      else s
-    }
+  def tamper(s: String): String = {
+    val halfLength = s.size / 2
+    if (halfLength > 0)
+      s.substring(0, halfLength) + ((s
+        .charAt(halfLength)
+        .toInt + 1) % 256).toChar + s.substring(halfLength + 1)
+    else s
   }
 }

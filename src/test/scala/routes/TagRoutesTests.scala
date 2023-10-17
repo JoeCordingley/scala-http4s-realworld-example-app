@@ -117,31 +117,30 @@ object TagRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
     }
-
-    implicit val app: HttpApp[IO] = {
-      val passwordHasher = PasswordHasher.impl
-      val idHasher = IdHasher.impl("salt")
-      val userRepo = UserRepo.impl(xa)
-      val articleRepo = ArticleRepo.impl(xa)
-      val followerRepo = FollowerRepo.impl(xa)
-      val tagRepo = TagRepo.impl(xa)
-      val favoriteRepo = FavoriteRepo.impl(xa)
-      val userApis = UserApis.impl(passwordHasher, token, userRepo)
-      val articleApis = ArticleApis.impl(
-        articleRepo,
-        followerRepo,
-        tagRepo,
-        favoriteRepo,
-        idHasher
+  }
+  implicit val app: HttpApp[IO] = {
+    val passwordHasher = PasswordHasher.impl
+    val idHasher = IdHasher.impl("salt")
+    val userRepo = UserRepo.impl(xa)
+    val articleRepo = ArticleRepo.impl(xa)
+    val followerRepo = FollowerRepo.impl(xa)
+    val tagRepo = TagRepo.impl(xa)
+    val favoriteRepo = FavoriteRepo.impl(xa)
+    val userApis = UserApis.impl(passwordHasher, token, userRepo)
+    val articleApis = ArticleApis.impl(
+      articleRepo,
+      followerRepo,
+      tagRepo,
+      favoriteRepo,
+      idHasher
+    )
+    val tagApis = TagApis.impl(tagRepo)
+    mkApp(
+      List(
+        UserRoutes(userApis),
+        ArticleRoutes(articleApis),
+        TagRoutes(tagApis)
       )
-      val tagApis = TagApis.impl(tagRepo)
-      mkApp(
-        List(
-          UserRoutes(userApis),
-          ArticleRoutes(articleApis),
-          TagRoutes(tagApis)
-        )
-      )
-    }
+    )
   }
 }

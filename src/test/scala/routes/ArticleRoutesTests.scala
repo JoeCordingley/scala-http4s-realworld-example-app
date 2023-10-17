@@ -979,46 +979,46 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
     }
+  }
 
-    def generateCreateArticleBodies(
-        n: Int,
-        tags: List[String] = List.empty
-    ): List[CreateArticleBody] =
-      List.fill(n) {
-        val title = Random.shuffle("articletitle").mkString
-        val description = Random.shuffle("articledescription").mkString
-        val body = Random.shuffle("articlebody").mkString
-        val tagList =
-          if (tags.isEmpty)
-            List("tag1", "tag2", "tag3", "tag4").map(Random.shuffle(_).mkString)
-          else tags
-        CreateArticleBody(title, description, body, Some(tagList))
-      }
-
-    implicit val app: HttpApp[IO] = {
-      val passwordHasher = PasswordHasher.impl
-      val idHasher = IdHasher.impl("salt")
-      val userRepo = UserRepo.impl(xa)
-      val articleRepo = ArticleRepo.impl(xa)
-      val followerRepo = FollowerRepo.impl(xa)
-      val tagRepo = TagRepo.impl(xa)
-      val favoriteRepo = FavoriteRepo.impl(xa)
-      val userApis = UserApis.impl(passwordHasher, token, userRepo)
-      val profileApis = ProfileApis.impl(userRepo, followerRepo)
-      val articleApis = ArticleApis.impl(
-        articleRepo,
-        followerRepo,
-        tagRepo,
-        favoriteRepo,
-        idHasher
-      )
-      mkApp(
-        List(
-          UserRoutes(userApis),
-          ProfileRoutes(profileApis),
-          ArticleRoutes(articleApis)
-        )
-      )
+  def generateCreateArticleBodies(
+      n: Int,
+      tags: List[String] = List.empty
+  ): List[CreateArticleBody] =
+    List.fill(n) {
+      val title = Random.shuffle("articletitle").mkString
+      val description = Random.shuffle("articledescription").mkString
+      val body = Random.shuffle("articlebody").mkString
+      val tagList =
+        if (tags.isEmpty)
+          List("tag1", "tag2", "tag3", "tag4").map(Random.shuffle(_).mkString)
+        else tags
+      CreateArticleBody(title, description, body, Some(tagList))
     }
+
+  implicit val app: HttpApp[IO] = {
+    val passwordHasher = PasswordHasher.impl
+    val idHasher = IdHasher.impl("salt")
+    val userRepo = UserRepo.impl(xa)
+    val articleRepo = ArticleRepo.impl(xa)
+    val followerRepo = FollowerRepo.impl(xa)
+    val tagRepo = TagRepo.impl(xa)
+    val favoriteRepo = FavoriteRepo.impl(xa)
+    val userApis = UserApis.impl(passwordHasher, token, userRepo)
+    val profileApis = ProfileApis.impl(userRepo, followerRepo)
+    val articleApis = ArticleApis.impl(
+      articleRepo,
+      followerRepo,
+      tagRepo,
+      favoriteRepo,
+      idHasher
+    )
+    mkApp(
+      List(
+        UserRoutes(userApis),
+        ProfileRoutes(profileApis),
+        ArticleRoutes(articleApis)
+      )
+    )
   }
 }

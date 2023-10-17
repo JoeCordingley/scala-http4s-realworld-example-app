@@ -16,6 +16,7 @@ import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.headers.Authorization
 import org.http4s.implicits.*
 import tsec.mac.jca.HMACSHA256
+import org.typelevel.ci.CIString
 
 package object routes {
 
@@ -105,7 +106,7 @@ package object routes {
     app.run(rq)
 
   def withToken(rq: Request[IO], jwt: String): Request[IO] =
-    rq.withHeaders(Authorization(Credentials.Token("Token".ci, jwt)))
+    rq.withHeaders(Authorization(Credentials.Token(CIString("Token"), jwt)))
 
   def logon(body: RegisterUserBody)(implicit app: HttpApp[IO]): IO[String] =
     for {

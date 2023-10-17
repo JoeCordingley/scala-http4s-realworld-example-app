@@ -534,41 +534,40 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
     }
-
-    def generateAddCommentBodies(
-        n: Int,
-        tags: List[String] = List.empty
-    ): List[AddCommentBody] =
-      List.fill(n) {
-        val body = Random.shuffle("comment").mkString
-        AddCommentBody(body)
-      }
-
-    implicit val app: HttpApp[IO] = {
-      val passwordHasher = PasswordHasher.impl
-      val idHasher = IdHasher.impl("salt")
-      val userRepo = UserRepo.impl(xa)
-      val articleRepo = ArticleRepo.impl(xa)
-      val followerRepo = FollowerRepo.impl(xa)
-      val tagRepo = TagRepo.impl(xa)
-      val favoriteRepo = FavoriteRepo.impl(xa)
-      val commentRepo = CommentRepo.impl(xa)
-      val userApis = UserApis.impl(passwordHasher, token, userRepo)
-      val articleApis = ArticleApis.impl(
-        articleRepo,
-        followerRepo,
-        tagRepo,
-        favoriteRepo,
-        idHasher
-      )
-      val commentApis = CommentApis.impl(commentRepo, articleRepo, followerRepo)
-      mkApp(
-        List(
-          UserRoutes(userApis),
-          ArticleRoutes(articleApis),
-          CommentRoutes(commentApis)
-        )
-      )
+  }
+  def generateAddCommentBodies(
+      n: Int,
+      tags: List[String] = List.empty
+  ): List[AddCommentBody] =
+    List.fill(n) {
+      val body = Random.shuffle("comment").mkString
+      AddCommentBody(body)
     }
+
+  implicit val app: HttpApp[IO] = {
+    val passwordHasher = PasswordHasher.impl
+    val idHasher = IdHasher.impl("salt")
+    val userRepo = UserRepo.impl(xa)
+    val articleRepo = ArticleRepo.impl(xa)
+    val followerRepo = FollowerRepo.impl(xa)
+    val tagRepo = TagRepo.impl(xa)
+    val favoriteRepo = FavoriteRepo.impl(xa)
+    val commentRepo = CommentRepo.impl(xa)
+    val userApis = UserApis.impl(passwordHasher, token, userRepo)
+    val articleApis = ArticleApis.impl(
+      articleRepo,
+      followerRepo,
+      tagRepo,
+      favoriteRepo,
+      idHasher
+    )
+    val commentApis = CommentApis.impl(commentRepo, articleRepo, followerRepo)
+    mkApp(
+      List(
+        UserRoutes(userApis),
+        ArticleRoutes(articleApis),
+        CommentRoutes(commentApis)
+      )
+    )
   }
 }

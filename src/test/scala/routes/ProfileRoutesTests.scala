@@ -175,14 +175,13 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         t.unsafeRunSync()
       }
     }
-
-    implicit val app: HttpApp[IO] = {
-      val passwordHasher = PasswordHasher.impl
-      val userRepo = UserRepo.impl(xa)
-      val followerRepo = FollowerRepo.impl(xa)
-      val userApis = UserApis.impl(passwordHasher, token, userRepo)
-      val profileApis = ProfileApis.impl(userRepo, followerRepo)
-      mkApp(List(UserRoutes(userApis), ProfileRoutes(profileApis)))
-    }
+  }
+  implicit val app: HttpApp[IO] = {
+    val passwordHasher = PasswordHasher.impl
+    val userRepo = UserRepo.impl(xa)
+    val followerRepo = FollowerRepo.impl(xa)
+    val userApis = UserApis.impl(passwordHasher, token, userRepo)
+    val profileApis = ProfileApis.impl(userRepo, followerRepo)
+    mkApp(List(UserRoutes(userApis), ProfileRoutes(profileApis)))
   }
 }
