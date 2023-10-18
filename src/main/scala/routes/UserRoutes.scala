@@ -2,7 +2,6 @@ package io.rw.app.routes
 
 import cats.effect.Async
 import cats.implicits.*
-import io.circe.generic.auto.*
 import io.rw.app.apis.*
 import io.rw.app.data.AuthUser
 import io.rw.app.data.ApiInputs.*

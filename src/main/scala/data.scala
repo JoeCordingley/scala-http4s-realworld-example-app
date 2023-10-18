@@ -3,27 +3,30 @@ package io.rw.app
 import java.time.Instant
 import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
+import io.circe.{Decoder, Encoder}
+import io.circe.generic.semiauto.*
 
 object data {
 
-  type ApiResult[R <: ApiOutput] = Either[ApiError, R]
+  type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
 
   object RequestBodies {
-    case class WrappedUserBody[T](user: T)
-    case class AuthenticateUserBody(email: String, password: String)
+    case class WrappedUserBody[T](user: T) derives Decoder
+
+    case class AuthenticateUserBody(email: String, password: String) derives Decoder
     case class RegisterUserBody(
         username: String,
         email: String,
         password: String
-    )
+    ) derives Decoder
     case class UpdateUserBody(
         username: Option[String],
         email: Option[String],
         password: Option[String],
         bio: Option[String],
         image: Option[String]
-    )
+    ) derives Decoder
     case class WrappedArticleBody[T](article: T)
     case class CreateArticleBody(
         title: String,
@@ -43,7 +46,7 @@ object data {
   sealed trait ApiInput
   object ApiInputs {
     case class AuthenticateUserInput(email: String, password: String)
-        extends ApiInput
+        extends ApiInput 
     case class RegisterUserInput(
         username: String,
         email: String,
@@ -107,10 +110,10 @@ object data {
 
   sealed trait ApiOutput
   object ApiOutputs {
-    case class AuthenticateUserOutput(user: User) extends ApiOutput
-    case class RegisterUserOutput(user: User) extends ApiOutput
-    case class GetUserOutput(user: User) extends ApiOutput
-    case class UpdateUserOutput(user: User) extends ApiOutput
+    case class AuthenticateUserOutput(user: User) derives Encoder.AsObject
+    case class RegisterUserOutput(user: User) derives Encoder.AsObject
+    case class GetUserOutput(user: User) derives Encoder.AsObject
+    case class UpdateUserOutput(user: User) derives Encoder.AsObject
     case class GetProfileOutput(profile: Profile) extends ApiOutput
     case class FollowUserOutput(profile: Profile) extends ApiOutput
     case class UnfollowUserOutput(profile: Profile) extends ApiOutput

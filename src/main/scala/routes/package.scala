@@ -55,7 +55,7 @@ package object routes {
 
   val defaultNotFoundResponse = NotFoundResponse(404, "Not Found")
 
-  def toResponse[F[_]: Sync, R <: ApiOutput](
+  def toResponse[F[_]: Sync, R](
       res: ApiResult[R]
   )(implicit dsl: Http4sDsl[F], encoder: Encoder[R]): F[Response[F]] = {
     import dsl.*
