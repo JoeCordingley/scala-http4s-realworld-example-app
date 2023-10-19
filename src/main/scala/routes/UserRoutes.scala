@@ -10,6 +10,7 @@ import io.rw.app.valiation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
+import json.*
 
 object UserRoutes {
 
@@ -21,10 +22,10 @@ object UserRoutes {
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "users" / "login" as _ =>
         for {
-          body <- rq.req.as[WrappedUserBody[AuthenticateUserBody]]
-          rs <- withValidation(validAuthenticateUserBody(body.user)) { valid =>
+          WrappedUserBody(JsonObject(((_, email), (_, password)))) <- rq.req.as[WrappedUserBody[AuthenticateUserBody2]]
+          rs <- withValidation(validEmail(email)) { email =>
             users
-              .authenticate(AuthenticateUserInput(valid.email, valid.password))
+              .authenticate(AuthenticateUserInput(email, password))
               .flatMap(toResponse(_))
           }
         } yield rs

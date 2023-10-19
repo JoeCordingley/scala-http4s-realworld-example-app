@@ -5,16 +5,24 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
+import json.*
 
 object data {
 
   type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
 
-  object RequestBodies {
-    case class WrappedUserBody[T](user: T) derives Decoder
+  case class Email(value: String)
+  object Email:
+    given Decoder[Email] = Decoder[String].map(Email(_))
+  case class Password(value: String)
+  object Password:
+    given Decoder[Password] = Decoder[String].map(Password(_))
 
+  object RequestBodies {
+    type AuthenticateUserBody2 = JsonObject[(("email", Email), ("password", Password))]
     case class AuthenticateUserBody(email: String, password: String) derives Decoder
+    case class WrappedUserBody[T](user: T) derives Decoder
     case class RegisterUserBody(
         username: String,
         email: String,
@@ -45,7 +53,7 @@ object data {
 
   sealed trait ApiInput
   object ApiInputs {
-    case class AuthenticateUserInput(email: String, password: String)
+    case class AuthenticateUserInput(email: Email, password: Password)
         extends ApiInput 
     case class RegisterUserInput(
         username: String,

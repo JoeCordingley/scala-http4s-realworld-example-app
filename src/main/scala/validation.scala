@@ -4,6 +4,7 @@ import cats.data.*
 import cats.data.Validated.*
 import cats.implicits.*
 import io.rw.app.data.RequestBodies.*
+import io.rw.app.data.*
 
 object valiation {
 
@@ -46,11 +47,12 @@ object valiation {
 
   type ValidationResult[A] = ValidatedNec[InvalidField, A]
 
-  def validAuthenticateUserBody(
-      body: AuthenticateUserBody
-  ): ValidationResult[AuthenticateUserBody] =
-    (validEmail(body.email), body.password.validNec)
-      .mapN(AuthenticateUserBody.apply)
+//  def validAuthenticateUserBody(
+//
+//  ): ValidationResult[AuthenticateUserBody] =
+//    (validEmail(email), password.validNec)
+//      .mapN(AuthenticateUserBody.apply)
+
 
   def validRegisterUserBody(
       body: RegisterUserBody
@@ -106,6 +108,8 @@ object valiation {
       looksLikeEmail(trimmedEmail)
     ).mapN({ case t => t._1 }).leftMap(toInvalidField(_, InvalidEmail.apply(_)))
   }
+
+  val validEmail: Email => ValidationResult[Email] = ???
 
   def validPassword(password: String): ValidationResult[String] =
     (notBlank(password), min(password, 8), max(password, 100))
