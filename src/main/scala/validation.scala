@@ -53,7 +53,6 @@ object valiation {
 //    (validEmail(email), password.validNec)
 //      .mapN(AuthenticateUserBody.apply)
 
-
   def validRegisterUserBody(
       body: RegisterUserBody
   ): ValidationResult[RegisterUserBody] =
@@ -109,7 +108,9 @@ object valiation {
     ).mapN({ case t => t._1 }).leftMap(toInvalidField(_, InvalidEmail.apply(_)))
   }
 
-  val validEmail: Email => ValidationResult[Email] = ???
+  val validEmail: Email => ValidationResult[Email] = { case Email(email) =>
+    validEmail(email).map(Email(_))
+  }
 
   def validPassword(password: String): ValidationResult[String] =
     (notBlank(password), min(password, 8), max(password, 100))

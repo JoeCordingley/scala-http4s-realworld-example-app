@@ -20,8 +20,8 @@ object data {
     given Decoder[Password] = Decoder[String].map(Password(_))
 
   object RequestBodies {
-    type AuthenticateUserBody2 = JsonObject[(("email", Email), ("password", Password))]
-    case class AuthenticateUserBody(email: String, password: String) derives Decoder
+    type AuthenticateUserBody =
+      JsonObject[(("email", Email), ("password", Password))]
     case class WrappedUserBody[T](user: T) derives Decoder
     case class RegisterUserBody(
         username: String,
@@ -54,7 +54,7 @@ object data {
   sealed trait ApiInput
   object ApiInputs {
     case class AuthenticateUserInput(email: Email, password: Password)
-        extends ApiInput 
+        extends ApiInput
     case class RegisterUserInput(
         username: String,
         email: String,

@@ -4,6 +4,8 @@ import cats.*
 import cats.data.*
 import cats.effect.IO
 import io.circe.generic.auto.*
+import io.circe.Json
+import io.circe.literal.*
 import io.rw.app.apis.*
 import io.rw.app.data.*
 import io.rw.app.data.ApiErrors.*
@@ -144,8 +146,12 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       test("existing user should authenticate and get valid token back") {
         val registerBody =
           RegisterUserBody("username", "email@email.com", "password123")
-        val authenticateBody =
-          AuthenticateUserBody("email@email.com", "password123")
+        val authenticateBody = json"""
+          {
+            "email": "email@email.com",
+            "password": "password123"
+          }
+        """
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody))
@@ -154,7 +160,7 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
           payload <- token.validate(user.token)
         } yield {
           rs2.status ==> Status.Ok
-          user.email ==> authenticateBody.email
+          user.email ==> "email@email.com"
           payload.isDefined ==> true
         }
 
@@ -164,8 +170,12 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       test("existing user with wrong password should get error") {
         val registerBody =
           RegisterUserBody("username", "email@email.com", "password123")
-        val authenticateBody =
-          AuthenticateUserBody("email@email.com", "password12345")
+        val authenticateBody = json"""
+          {
+            "email": "email@email.com",
+            "password": "password12345"
+          }
+        """
 
         val t = for {
           rs1 <- post("users", WrappedUserBody(registerBody))
@@ -181,8 +191,12 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("non existing user should get error") {
-        val registerBody =
-          AuthenticateUserBody("email@email.com", "password123")
+        val registerBody = json"""
+          {
+            "email": "email@email.com",
+            "password": "password123"
+          }
+        """
 
         val t = for {
           rs <- post("users/login", WrappedUserBody(registerBody))

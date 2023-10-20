@@ -22,7 +22,8 @@ object UserRoutes {
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "users" / "login" as _ =>
         for {
-          WrappedUserBody(JsonObject(((_, email), (_, password)))) <- rq.req.as[WrappedUserBody[AuthenticateUserBody2]]
+          WrappedUserBody(JsonObject(((_, email), (_, password)))) <- rq.req
+            .as[WrappedUserBody[AuthenticateUserBody]]
           rs <- withValidation(validEmail(email)) { email =>
             users
               .authenticate(AuthenticateUserInput(email, password))
