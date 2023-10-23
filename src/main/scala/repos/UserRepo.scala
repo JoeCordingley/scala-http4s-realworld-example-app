@@ -5,12 +5,12 @@ import doobie.*
 import doobie.implicits.*
 import doobie.implicits.legacy.instant.*
 import io.rw.app.data.Entities.*
-import io.rw.app.data.Email
+import io.rw.app.data.{Email, Username}
 
 trait UserRepo[F[_]] {
   def findUserById(id: Int): F[Option[WithId[User]]]
   def findUserByEmail(email: Email): F[Option[WithId[User]]]
-  def findUserByUsername(username: String): F[Option[WithId[User]]]
+  def findUserByUsername(username: Username): F[Option[WithId[User]]]
   def createUser(user: User): F[WithId[User]]
   def updateUser(id: Int, user: UserForUpdate): F[WithId[User]]
 }
@@ -24,7 +24,7 @@ object UserRepo {
     def findUserByEmail(email: Email): IO[Option[WithId[User]]] =
       Q.selectUserByEmail(email).option.transact(xa)
 
-    def findUserByUsername(username: String): IO[Option[WithId[User]]] =
+    def findUserByUsername(username: Username): IO[Option[WithId[User]]] =
       Q.selectUserByUsername(username).option.transact(xa)
 
     def createUser(user: User): IO[WithId[User]] =
@@ -71,25 +71,25 @@ object UserRepo {
          where email = ${email.value}
       """.query[WithId[User]]
 
-    def selectUserByUsername(username: String) =
+    def selectUserByUsername(username: Username) =
       sql"""
          select id, email, username, password, bio, image, created_at, updated_at
          from users
-         where username = $username
+         where username = ${username.value}
       """.query[WithId[User]]
 
     def insertUser(user: User) =
       sql"""
          insert into users(email, username, password, bio, image, created_at, updated_at)
-         values(${user.email}, ${user.username}, ${user.password}, ${user.bio}, ${user.image}, ${user.createdAt}, ${user.updatedAt})
+         values(${user.email.value}, ${user.username.value}, ${user.password.value}, ${user.bio}, ${user.image}, ${user.createdAt}, ${user.updatedAt})
       """.update
 
     def updateUser(id: Int, user: UserForUpdate) =
       sql"""
          update users u
-         set email = coalesce(${user.email}, u.email),
-             username = coalesce(${user.username}, u.username),
-             password = coalesce(${user.password}, u.password),
+         set email = coalesce(${user.email.map(_.value)}, u.email),
+             username = coalesce(${user.username.map(_.value)}, u.username),
+             password = coalesce(${user.password.map(_.value)}, u.password),
              bio = coalesce(${user.bio}, u.bio),
              image = coalesce(${user.image}, u.image),
              updated_at = ${user.updatedAt}

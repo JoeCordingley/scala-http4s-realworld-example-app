@@ -8,7 +8,7 @@ import io.rw.app.data.ApiErrors.*
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.ApiOutputs.*
 import io.rw.app.repos.*
-import io.rw.app.security.{JwtToken, PasswordHasher}
+import io.rw.app.security.{JwtToken, PasswordHasher, HashedPassword}
 import java.time.Instant
 
 trait UserApis[F[_]] {
@@ -35,7 +35,7 @@ object UserApis {
         userWithId <- OptionT(userRepo.findUserByEmail(input.email))
         _ <- OptionT(
           passwordHasher
-            .validate(input.password.value, userWithId.entity.password)
+            .validate(input.password, userWithId.entity.password)
             .map(if (_) Some(true) else None)
         )
         token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
@@ -49,7 +49,7 @@ object UserApis {
     }
 
     def register(input: RegisterUserInput): F[ApiResult[RegisterUserOutput]] = {
-      def mkUserEntity(hashedPassword: String): E.User = {
+      def mkUserEntity(hashedPassword: HashedPassword): E.User = {
         val now = Instant.now
         E.User(
           input.email,
@@ -64,7 +64,7 @@ object UserApis {
 
       val userWithToken = for {
         _ <- EitherT(
-          emailAndUsernameNotExist(Email(input.email), input.username)
+          emailAndUsernameNotExist(input.email, input.username)
         )
         hashedPsw <- EitherT.liftF(passwordHasher.hash(input.password))
         userWithId <- EitherT.liftF(
@@ -91,7 +91,7 @@ object UserApis {
 
     def update(input: UpdateUserInput): F[ApiResult[UpdateUserOutput]] = {
       def mkUserForUpdateEntity(
-          hashedPassword: Option[String]
+          hashedPassword: Option[HashedPassword]
       ): E.UserForUpdate = {
         val now = Instant.now
         E.UserForUpdate(
@@ -106,7 +106,7 @@ object UserApis {
 
       val userWithToken = for {
         _ <- input.email.traverse(e =>
-          EitherT(emailNotTakenByOthers(Email(e), input.authUser))
+          EitherT(emailNotTakenByOthers(e, input.authUser))
         )
         _ <- input.username.traverse(u =>
           EitherT(usernameNotTakenByOthers(u, input.authUser))
@@ -125,7 +125,7 @@ object UserApis {
 
     def emailAndUsernameNotExist(
         email: Email,
-        username: String
+        username: Username
     ): F[Either[ApiError, Boolean]] = {
       val notExists = for {
         emailNotExists <- EitherT(emailNotExists(email))
@@ -144,7 +144,7 @@ object UserApis {
     def emailNotExists(email: Email): F[Either[ApiError, Boolean]] =
       userRepo.findUserByEmail(email).map(notExists(_, EmailAlreadyExists()))
 
-    def usernameNotExists(username: String): F[Either[ApiError, Boolean]] =
+    def usernameNotExists(username: Username): F[Either[ApiError, Boolean]] =
       userRepo
         .findUserByUsername(username)
         .map(notExists(_, UsernameAlreadyExists()))
@@ -167,7 +167,7 @@ object UserApis {
         .map(notTakenByOthers(_, authUser, EmailAlreadyExists()))
 
     def usernameNotTakenByOthers(
-        username: String,
+        username: Username,
         authUser: AuthUser
     ): F[Either[ApiError, Boolean]] =
       userRepo

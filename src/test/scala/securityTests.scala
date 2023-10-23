@@ -1,7 +1,7 @@
 package test.io.rw.app
 
 import cats.effect.IO
-import io.rw.app.data.JwtTokenPayload
+import io.rw.app.data.{JwtTokenPayload, Password}
 import io.rw.app.security.*
 import tsec.mac.jca.HMACSHA256
 import utest.*
@@ -12,7 +12,7 @@ object securityTests extends TestSuite {
   val tests = Tests {
     test("test hashed password") {
       val passwordHasher = PasswordHasher.impl
-      val psw = "my_password_123"
+      val psw = Password("my_password_123")
 
       test("is valid") {
         val t = for {
@@ -29,7 +29,7 @@ object securityTests extends TestSuite {
         test("bad password") {
           val t = for {
             hash <- passwordHasher.hash(psw)
-            valid <- passwordHasher.validate(tamper(psw), hash)
+            valid <- passwordHasher.validate(atPassword(tamper)(psw), hash)
           } yield {
             valid ==> false
           }
@@ -40,7 +40,7 @@ object securityTests extends TestSuite {
         test("bad hash") {
           val t = for {
             hash <- passwordHasher.hash(psw)
-            valid <- passwordHasher.validate(psw, tamper(hash))
+            valid <- passwordHasher.validate(psw, atHashedPassword(tamper)(hash))
           } yield {
             valid ==> false
           }
@@ -87,4 +87,8 @@ object securityTests extends TestSuite {
         .toInt + 1) % 256).toChar + s.substring(halfLength + 1)
     else s
   }
+
+  val atPassword: (String => String) => (Password => Password) = at(Password(_), _.value)
+  val atHashedPassword: (String => String) => (HashedPassword => HashedPassword) = at(HashedPassword(_), _.value)
+  def at[A, B](to: A => B, from: B => A): (A => A) => (B => B) = f => b => to(f(from(b)))
 }

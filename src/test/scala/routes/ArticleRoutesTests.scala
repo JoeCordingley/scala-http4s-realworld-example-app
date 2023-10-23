@@ -30,7 +30,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
     test("get all") {
       test("authenticated user should get all articles") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
 
         val t = for {
@@ -52,7 +52,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("authenticated user should get articles paginated") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
 
         val t = for {
@@ -89,7 +89,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("authenticated user should get articles by tag") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
         val tag = "tagAbc"
         val createArticleBodiesWithTag =
@@ -114,9 +114,10 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("authenticated user should get articles by author") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
+        val username2 = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(username2, "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(7)
 
@@ -129,7 +130,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           _ <- createArticleBodies2
             .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
             .sequence
-          rs <- getWithToken(s"articles?author=${registerBody2.username}", jwt1)
+          rs <- getWithToken(s"articles?author=$username2", jwt1)
           (articles, articlesCount) <- rs
             .as[GetAllArticlesOutput]
             .map(r => (r.articles, r.articlesCount))
@@ -142,10 +143,12 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("authenticated user should get articles by favorited") {
+        val username1 = "username1"
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody(username1, "email1@email.com", "password123")
+        val username2 = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(username2, "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(7)
 
@@ -159,7 +162,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
             .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
             .sequence
           rs1 <- getWithToken(
-            s"articles?author=${registerBody2.username}",
+            s"articles?author=$username2",
             jwt1
           )
           (articles, articlesCount) <- rs1
@@ -170,7 +173,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
             .map(a => postWithToken(s"articles/${a.slug}/favorite", jwt1))
             .sequence
           rs2 <- getWithToken(
-            s"articles?favorited=${registerBody1.username}",
+            s"articles?favorited=$username1",
             jwt1
           )
           (articles2, articlesCount2) <- rs2
@@ -189,7 +192,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("not authenticated user should get all articles") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBodies = generateCreateArticleBodies(10)
 
         val t = for {
@@ -213,9 +216,10 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
     test("get feed") {
       test("authenticated user should get feed") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
+        val username2 = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(username2, "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(7)
 
@@ -229,7 +233,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
             .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
             .sequence
           rs1 <- postWithToken(
-            s"profiles/${registerBody2.username}/follow",
+            s"profiles/$username2/follow",
             jwt1
           )
           rs2 <- getWithToken(s"articles/feed", jwt1)
@@ -247,9 +251,10 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("authenticated user should get feed paginated") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
+        val username2 = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(username2, "email2@email.com", "password123")
         val createArticleBodies1 = generateCreateArticleBodies(10)
         val createArticleBodies2 = generateCreateArticleBodies(10)
 
@@ -263,7 +268,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
             .map(b => postWithToken("articles", WrappedArticleBody(b), jwt2))
             .sequence
           rs1 <- postWithToken(
-            s"profiles/${registerBody2.username}/follow",
+            s"profiles/$username2/follow",
             jwt1
           )
           rs2 <- getWithToken(s"articles/feed?limit=7&offset=0", jwt1)
@@ -308,7 +313,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
     test("get") {
       test("authenticated user should get article by slug") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -336,7 +341,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when article does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -350,7 +355,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("not authenticated user should get article by slug") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -377,8 +382,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("create") {
       test("authenticated user should create article") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -402,15 +408,16 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           article.favoritesCount ==> 0
           article.favorited ==> false
           Some(article.tagList.toSet) ==> createArticleBody.tagList.map(_.toSet)
-          article.author.username ==> registerBody.username
+          article.author.username ==> username
         }
 
         t.unsafeRunSync()
       }
 
       test("authenticated user should create article with the same title") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
         val createArticleBody1 = CreateArticleBody(
           "title",
           "description1",
@@ -448,7 +455,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           Some(article1.tagList.toSet) ==> createArticleBody1.tagList.map(
             _.toSet
           )
-          article1.author.username ==> registerBody.username
+          article1.author.username ==> username
           rs2.status ==> Status.Ok
           article2.title ==> createArticleBody2.title
           article2.description ==> createArticleBody2.description
@@ -458,7 +465,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           Some(article2.tagList.toSet) ==> createArticleBody2.tagList.map(
             _.toSet
           )
-          article2.author.username ==> registerBody.username
+          article2.author.username ==> username
         }
 
         t.unsafeRunSync()
@@ -468,7 +475,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get errors when creating article with invalid title, body or description"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody =
           CreateArticleBody("", "", "", Some(List("tag1", "tag2", "tag3")))
 
@@ -511,8 +518,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
     test("update") {
       test("authenticated user should update article") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -548,7 +556,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
           article.favoritesCount ==> 0
           article.favorited ==> false
           Some(article.tagList.toSet) ==> createArticleBody.tagList.map(_.toSet)
-          article.author.username ==> registerBody.username
+          article.author.username ==> username
         }
 
         t.unsafeRunSync()
@@ -558,7 +566,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get errors when updating article with invalid title, body or description"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -597,7 +605,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when updating non existing article"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val updateArticleBody = UpdateArticleBody(
           Some("newTitle"),
           Some("newDescription"),
@@ -622,9 +630,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when updating another's article"
       ) {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -676,7 +684,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
     test("delete") {
       test("authenticated user should delete article") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -707,7 +715,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when article does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -723,9 +731,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when deleting another's article"
       ) {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -767,11 +775,11 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
     test("favorite") {
       test("authenticated user should favorite article") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val registerBody3 =
-          RegisterUserBody("username3", "email3@email.com", "password123")
+          registerUserBody("username3", "email3@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -808,9 +816,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("authenticated user should favorite article twice") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -848,7 +856,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when article does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -874,9 +882,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
     test("unfavorite") {
       test("authenticated user should unfavorite article") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -912,9 +920,9 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
 
       test("authenticated user should unfavorite article twice") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -957,7 +965,7 @@ object ArticleRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when article does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)

@@ -7,6 +7,7 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
 import json.*
 import cats.syntax.all.*
+import io.rw.app.security.HashedPassword
 
 object data {
 
@@ -17,7 +18,8 @@ object data {
   object Email:
     //TODO remove
     def apply(s: String): Email = s
-    given Decoder[Email] = Decoder.decodeString.widen
+    given Decoder[Email] = Decoder.decodeString
+    given Encoder[Email] = Encoder.encodeString
     extension (e: Email)
       def value: String = e
   case class Username(value: String)
@@ -34,9 +36,9 @@ object data {
     //type WrappedUserBody[T] = SoloObj[("user", T)]
     type RegisterUserBody = JsonObject[(("username", Username), ("email", Email), ("password", Password))]
     case class UpdateUserBody(
-        username: Option[String],
-        email: Option[String],
-        password: Option[String],
+        username: Option[Username],
+        email: Option[Email],
+        password: Option[Password],
         bio: Option[String],
         image: Option[String]
     ) derives Decoder
@@ -61,24 +63,24 @@ object data {
     case class AuthenticateUserInput(email: Email, password: Password)
         extends ApiInput
     case class RegisterUserInput(
-        username: String,
-        email: String,
-        password: String
+        username: Username,
+        email: Email,
+        password: Password
     ) extends ApiInput
     case class GetUserInput(authUser: AuthUser) extends ApiInput
     case class UpdateUserInput(
         authUser: AuthUser,
-        username: Option[String],
-        email: Option[String],
-        password: Option[String],
+        username: Option[Username],
+        email: Option[Email],
+        password: Option[Password],
         bio: Option[String],
         image: Option[String]
     ) extends ApiInput
-    case class GetProfileInput(authUser: Option[AuthUser], username: String)
+    case class GetProfileInput(authUser: Option[AuthUser], username: Username)
         extends ApiInput
-    case class FollowUserInput(authUser: AuthUser, username: String)
+    case class FollowUserInput(authUser: AuthUser, username: Username)
         extends ApiInput
-    case class UnfollowUserInput(authUser: AuthUser, username: String)
+    case class UnfollowUserInput(authUser: AuthUser, username: Username)
         extends ApiInput
     case class GetAllArticlesInput(
         authUser: Option[AuthUser],
@@ -165,18 +167,18 @@ object data {
   object Entities {
     case class WithId[T](id: Int, entity: T)
     case class User(
-        email: String,
-        username: String,
-        password: String,
+        email: Email,
+        username: Username,
+        password: HashedPassword,
         bio: Option[String],
         image: Option[String],
         createdAt: Instant,
         updatedAt: Instant
     )
     case class UserForUpdate(
-        username: Option[String],
-        email: Option[String],
-        password: Option[String],
+        username: Option[Username],
+        email: Option[Email],
+        password: Option[HashedPassword],
         bio: Option[String],
         image: Option[String],
         updatedAt: Instant
@@ -228,14 +230,14 @@ object data {
   )
   case class Pagination(limit: Int, offset: Int)
   case class User(
-      email: String,
+      email: Email,
       token: String,
-      username: String,
+      username: Username,
       bio: Option[String] = None,
       image: Option[String] = None
   )
   case class Profile(
-      username: String,
+      username: Username,
       bio: Option[String],
       image: Option[String],
       following: Boolean

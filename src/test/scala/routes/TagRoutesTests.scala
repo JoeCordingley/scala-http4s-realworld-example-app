@@ -29,7 +29,7 @@ object TagRoutesTests extends WithEmbededDbTestSuite {
     test("get") {
       test("authenticated user should get all tags") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val mostPopularTag = "tagX"
         val tags1 = List(mostPopularTag, "tag1", "tag2", "tag3", "tag4")
         val tags2 = List("tag2", mostPopularTag, "tag4", "tag5", "tag6")
@@ -74,7 +74,7 @@ object TagRoutesTests extends WithEmbededDbTestSuite {
 
       test("non authenticated user should get all tags") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val mostPopularTag = "tagX"
         val tags1 = List(mostPopularTag, "tag1", "tag2", "tag3", "tag4")
         val tags2 = List("tag2", mostPopularTag, "tag4", "tag5", "tag6")

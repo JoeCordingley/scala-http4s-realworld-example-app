@@ -33,7 +33,7 @@ object UserRoutes {
 
       case rq @ POST -> Root / "users" as _ =>
         for {
-          WrappedUserBody(JsonObject(((_, username), (_, email), (_, passord)))) <- rq.req.as[WrappedUserBody[RegisterUserBody]]
+          WrappedUserBody(JsonObject(((_, username), (_, email), (_, password)))) <- rq.req.as[WrappedUserBody[RegisterUserBody]]
           rs <- withValidation((validUsername(username), validEmail(email), validPassword(password)).tupled) { case (username, email, password) =>
             users
               .register(

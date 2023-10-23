@@ -110,6 +110,8 @@ object valiation {
       .mapN({ case t => t._1 })
       .leftMap(toInvalidField(_, InvalidPassword.apply(_)))
 
+  def validPassword(password: Password): ValidationResult[Password] = validPassword(password.value).map(Password(_))
+
 
   def validUsername(username: String): ValidationResult[String] = {
     val trimmedUsername = username.trim
@@ -120,8 +122,7 @@ object valiation {
     ).mapN({ case t => t._1 })
       .leftMap(toInvalidField(_, InvalidUsername.apply(_)))
   }
-  def usernameValueErrors(username: String): NonEmptyChain[InvalidField] = ???
-  def usernameErrors(username: Username): NonEmptyChain[InvalidField] = usernameValueErrors(username.value)
+  def validUsername(username: Username): ValidationResult[Username] = validUsername(username.value).map(Username(_))
 
   def validTitle(title: String): ValidationResult[String] = {
     val trimmedTitle = title.trim

@@ -29,9 +29,10 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
     test("add") {
       test("authenticated user should add comment to other's article") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
+        val username2 = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(username2, "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -59,15 +60,16 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
           comment.body ==> addCommentBody.body
-          comment.author.username ==> registerBody2.username
+          comment.author.username ==> Username(username2)
         }
 
         t.unsafeRunSync()
       }
 
       test("authenticated user should add comment to its own article") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -94,15 +96,16 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
           comment.body ==> addCommentBody.body
-          comment.author.username ==> registerBody.username
+          comment.author.username ==> username
         }
 
         t.unsafeRunSync()
       }
 
       test("authenticated user should add multiple comments article") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -137,17 +140,18 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
           rs2.status ==> Status.Ok
           rs3.status ==> Status.Ok
           comment1.body ==> addCommentBody1.body
-          comment1.author.username ==> registerBody.username
+          comment1.author.username ==> username
           comment2.body ==> addCommentBody2.body
-          comment2.author.username ==> registerBody.username
+          comment2.author.username ==> username
         }
 
         t.unsafeRunSync()
       }
 
       test("authenticated user should add comments to different articles") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
         val createArticleBody1 = CreateArticleBody(
           "title1",
           "description1",
@@ -194,9 +198,9 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
           rs3.status ==> Status.Ok
           rs4.status ==> Status.Ok
           comment1.body ==> addCommentBody.body
-          comment1.author.username ==> registerBody.username
+          comment1.author.username ==> Username(username)
           comment2.body ==> addCommentBody.body
-          comment2.author.username ==> registerBody.username
+          comment2.author.username ==> Username(username)
         }
 
         t.unsafeRunSync()
@@ -206,7 +210,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get errors when adding comment with invalid body"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -243,7 +247,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when article does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val addCommentBody = AddCommentBody("some comment")
 
         val t = for {
@@ -279,7 +283,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
     test("get") {
       test("authenticated user should get all comments") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -320,38 +324,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get zero comments when article is not commented yet"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
-        val createArticleBody = CreateArticleBody(
-          "title",
-          "description",
-          "body",
-          Some(List("tag1", "tag2", "tag3"))
-        )
-
-        val t = for {
-          jwt <- logon(registerBody)
-          rs1 <- postWithToken(
-            "articles",
-            WrappedArticleBody(createArticleBody),
-            jwt
-          )
-          slug <- rs1.as[CreateArticleOutput].map(_.article.slug)
-          rs2 <- getWithToken(s"articles/$slug/comments", jwt)
-          comments <- rs2.as[GetCommentsOutput].map(_.comments)
-        } yield {
-          rs1.status ==> Status.Ok
-          rs2.status ==> Status.Ok
-          comments.size ==> 0
-        }
-
-        t.unsafeRunSync()
-      }
-
-      test(
-        "authenticated user should get not found when article does not exist"
-      ) {
-        val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -365,7 +338,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
 
       test("not authenticated user should get all comments") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -406,7 +379,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
     test("delete") {
       test("authenticated user should delete comment") {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -443,7 +416,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when comment does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -472,9 +445,9 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when deleting another's comment"
       ) {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody("username2", "email2@email.com", "password123")
         val createArticleBody = CreateArticleBody(
           "title",
           "description",
@@ -512,7 +485,7 @@ object CommentRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when article does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)

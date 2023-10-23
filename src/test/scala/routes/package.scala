@@ -1,7 +1,8 @@
 package test.io.rw.app
 
 import cats.effect.IO
-import io.circe.Encoder
+import io.circe.{Encoder, Json, ParsingFailure}
+import io.circe
 import io.circe.generic.auto.*
 import io.rw.app.data.*
 import io.rw.app.data.ApiErrors.*
@@ -108,9 +109,20 @@ package object routes {
   def withToken(rq: Request[IO], jwt: String): Request[IO] =
     rq.withHeaders(Authorization(Credentials.Token(CIString("Token"), jwt)))
 
-  def logon(body: RegisterUserBody)(implicit app: HttpApp[IO]): IO[String] =
+  def logon(body: Json)(implicit app: HttpApp[IO]): IO[String] =
     for {
       rs <- post("users", WrappedUserBody(body))
       jwt <- rs.as[RegisterUserOutput].map(_.user.token)
     } yield jwt
+
+  def registerUserBody(username: String, email: String, password: String): Json = circe.parser.parse(s"""
+  {
+    "username": "$username",
+    "email": "$email",
+    "password": "$password"
+  }
+  """) match {
+    case Right(json) => json
+    case Left(error) => throw new Exception(error)
+  }
 }

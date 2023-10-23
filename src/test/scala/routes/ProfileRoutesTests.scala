@@ -24,16 +24,17 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
   val tests = Tests {
     test("profile") {
       test("authenticated user should get profile") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
-          rs <- getWithToken(s"profiles/${registerBody.username}", jwt)
+          rs <- getWithToken(s"profiles/$username", jwt)
           profile <- rs.as[GetProfileOutput].map(_.profile)
         } yield {
           rs.status ==> Status.Ok
-          profile.username ==> registerBody.username
+          profile.username ==> Username(username)
         }
 
         t.unsafeRunSync()
@@ -43,7 +44,7 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found error when profile does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -56,16 +57,17 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
       }
 
       test("not authenticated user should get profile") {
+        val username = "username"
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody(username, "email@email.com", "password123")
 
         val t = for {
           _ <- logon(registerBody)
-          rs <- get(s"profiles/${registerBody.username}")
+          rs <- get(s"profiles/$username")
           profile <- rs.as[GetProfileOutput].map(_.profile)
         } yield {
           rs.status ==> Status.Ok
-          profile.username ==> registerBody.username
+          profile.username ==> Username(username)
         }
 
         t.unsafeRunSync()
@@ -75,18 +77,19 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
     test("follow") {
       test("authenticated user should follow existing user") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
+        val registerBody2Username = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(registerBody2Username, "email2@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody1)
           _ <- logon(registerBody2)
-          rs <- postWithToken(s"profiles/${registerBody2.username}/follow", jwt)
+          rs <- postWithToken(s"profiles/$registerBody2Username/follow", jwt)
           profile <- rs.as[FollowUserOutput].map(_.profile)
         } yield {
           rs.status ==> Status.Ok
-          profile.username ==> registerBody2.username
+          profile.username ==> Username(registerBody2Username)
           profile.following ==> true
         }
 
@@ -97,7 +100,7 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when profile does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)
@@ -123,26 +126,27 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
     test("unfollow") {
       test("authenticated user should unfollow existing user") {
         val registerBody1 =
-          RegisterUserBody("username1", "email1@email.com", "password123")
+          registerUserBody("username1", "email1@email.com", "password123")
+        val registerBody2Username = "username2"
         val registerBody2 =
-          RegisterUserBody("username2", "email2@email.com", "password123")
+          registerUserBody(registerBody2Username, "email2@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody1)
           _ <- logon(registerBody2)
           rs1 <- postWithToken(
-            s"profiles/${registerBody2.username}/follow",
+            s"profiles/$registerBody2Username/follow",
             jwt
           )
           rs2 <- deleteWithToken(
-            s"profiles/${registerBody2.username}/follow",
+            s"profiles/$registerBody2Username/follow",
             jwt
           )
           profile <- rs2.as[FollowUserOutput].map(_.profile)
         } yield {
           rs1.status ==> Status.Ok
           rs2.status ==> Status.Ok
-          profile.username ==> registerBody2.username
+          profile.username ==> registerBody2Username
           profile.following ==> false
         }
 
@@ -153,7 +157,7 @@ object ProfileRoutesTests extends WithEmbededDbTestSuite {
         "authenticated user should get not found when profile does not exist"
       ) {
         val registerBody =
-          RegisterUserBody("username", "email@email.com", "password123")
+          registerUserBody("username", "email@email.com", "password123")
 
         val t = for {
           jwt <- logon(registerBody)

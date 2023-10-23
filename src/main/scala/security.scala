@@ -10,19 +10,22 @@ import tsec.jwt.JWTClaims
 import tsec.mac.jca.{HMACSHA256, MacSigningKey}
 import tsec.passwordhashers.jca.SCrypt
 import tsec.passwordhashers.PasswordHash
+import io.rw.app.data.Password
 
 object security {
 
+  case class HashedPassword(value: String)
+
   trait PasswordHasher[F[_]] {
-    def hash(psw: String): F[String]
-    def validate(psw: String, hash: String): F[Boolean]
+    def hash(psw: Password): F[HashedPassword]
+    def validate(psw: Password, hash: HashedPassword): F[Boolean]
   }
 
   object PasswordHasher {
     def impl = new PasswordHasher[IO] {
-      def hash(psw: String): IO[String] = SCrypt.hashpw[IO](psw)
-      def validate(psw: String, hash: String): IO[Boolean] =
-        SCrypt.checkpwBool[IO](psw, PasswordHash(hash))
+      def hash(psw: Password): IO[HashedPassword] = SCrypt.hashpw[IO](psw.value).map(HashedPassword(_))
+      def validate(psw: Password, hash: HashedPassword): IO[Boolean] =
+        SCrypt.checkpwBool[IO](psw.value, PasswordHash(hash.value))
     }
   }
 

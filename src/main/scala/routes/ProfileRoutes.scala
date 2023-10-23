@@ -4,7 +4,7 @@ import cats.effect.Sync
 import cats.implicits.*
 import io.circe.generic.auto.*
 import io.rw.app.apis.*
-import io.rw.app.data.AuthUser
+import io.rw.app.data.{AuthUser, Username}
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.RequestBodies.*
 import io.rw.app.valiation.*
@@ -21,17 +21,17 @@ object ProfileRoutes {
 
     AuthedRoutes.of[Option[AuthUser], F] {
       case GET -> Root / "profiles" / username as authUser =>
-        profiles.get(GetProfileInput(authUser, username)).flatMap(toResponse(_))
+        profiles.get(GetProfileInput(authUser, Username(username))).flatMap(toResponse(_))
 
       case POST -> Root / "profiles" / username / "follow" as authUser =>
         withAuthUser(authUser) { u =>
-          profiles.follow(FollowUserInput(u, username)).flatMap(toResponse(_))
+          profiles.follow(FollowUserInput(u, Username(username))).flatMap(toResponse(_))
         }
 
       case DELETE -> Root / "profiles" / username / "follow" as authUser =>
         withAuthUser(authUser) { u =>
           profiles
-            .unfollow(UnfollowUserInput(u, username))
+            .unfollow(UnfollowUserInput(u, Username(username)))
             .flatMap(toResponse(_))
         }
     }
