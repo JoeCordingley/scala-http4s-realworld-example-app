@@ -78,3 +78,5 @@ given [L: Encoder, R: Encoder]: Encoder[L /: R] = {
 
 given [L: Decoder, R: Decoder]: Decoder[L /: R] =
   Decoder[L].map(Left(_)).or(Decoder[R].map(Right(_)))
+
+type SoloObj[A] = JsonObject[A *: EmptyTuple]

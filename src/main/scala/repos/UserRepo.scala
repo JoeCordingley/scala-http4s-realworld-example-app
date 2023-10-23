@@ -68,7 +68,7 @@ object UserRepo {
       sql"""
          select id, email, username, password, bio, image, created_at, updated_at
          from users
-         where email = $email
+         where email = ${email.value}
       """.query[WithId[User]]
 
     def selectUserByUsername(username: String) =
