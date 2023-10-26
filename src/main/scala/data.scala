@@ -14,7 +14,8 @@ object data {
   object RequestBodies {
     case class WrappedUserBody[T](user: T) derives Decoder
 
-    case class AuthenticateUserBody(email: String, password: String) derives Decoder
+    case class AuthenticateUserBody(email: String, password: String)
+        derives Decoder
     case class RegisterUserBody(
         username: String,
         email: String,
@@ -46,7 +47,7 @@ object data {
   sealed trait ApiInput
   object ApiInputs {
     case class AuthenticateUserInput(email: String, password: String)
-        extends ApiInput 
+        extends ApiInput
     case class RegisterUserInput(
         username: String,
         email: String,
