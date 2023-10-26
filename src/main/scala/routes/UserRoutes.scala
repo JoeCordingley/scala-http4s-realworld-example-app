@@ -3,13 +3,15 @@ package io.rw.app.routes
 import cats.effect.Async
 import cats.implicits.*
 import io.rw.app.apis.*
-import io.rw.app.data.AuthUser
+import io.rw.app.data.{AuthUser, Email, Password, Username}
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.RequestBodies.*
+import io.rw.app.data.JsonCodec.*
 import io.rw.app.valiation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
+import json.JsonObject
 
 object UserRoutes {
 
@@ -21,8 +23,8 @@ object UserRoutes {
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "users" / "login" as _ =>
         for {
-          body <- rq.req.as[WrappedUserBody[AuthenticateUserBody]]
-          rs <- withValidation(validAuthenticateUserBody(body.user)) { valid =>
+          JsonObject((_, JsonObject((_, Email(email)), (_, Password(password)))) *: EmptyTuple) <- rq.req.as[User[AuthenticateUser]]
+          rs <- withValidation(validAuthenticateUserBody(AuthenticateUserBody(email = email, password = password))) { valid =>
             users
               .authenticate(AuthenticateUserInput(valid.email, valid.password))
               .flatMap(toResponse(_))
@@ -31,8 +33,8 @@ object UserRoutes {
 
       case rq @ POST -> Root / "users" as _ =>
         for {
-          body <- rq.req.as[WrappedUserBody[RegisterUserBody]]
-          rs <- withValidation(validRegisterUserBody(body.user)) { valid =>
+          JsonObject((_, JsonObject((_, Username(username)), (_, Email(email)), (_, Password(password)))) *: EmptyTuple) <- rq.req.as[User[RegisterUser]]
+          rs <- withValidation(validRegisterUserBody(RegisterUserBody(username = username, email = email, password = password))) { valid =>
             users
               .register(
                 RegisterUserInput(valid.username, valid.email, valid.password)

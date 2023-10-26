@@ -42,6 +42,7 @@ object JsonFieldEncoder:
     def encode: String = summon[ValueOf[A]].value
     def decode: A = summon[ValueOf[A]].value
 
+
 case class JsonObject[A](pairs: A)
 
 object JsonObject:
@@ -56,6 +57,7 @@ object JsonObject:
     (Decoder[JsonMember[A]], Decoder[JsonObject[T]]).mapN {
       case (JsonMember(a), JsonObject(t)) => JsonObject(a *: t)
     }
+  type Solo[A] = JsonObject[A *: EmptyTuple]
 
 trait JsonMembersEncoder[A]:
   def encode(a: A): List[(String, Json)]
@@ -80,3 +82,12 @@ given [L: Decoder, R: Decoder]: Decoder[L /: R] =
   Decoder[L].map(Left(_)).or(Decoder[R].map(Right(_)))
 
 type SoloObj[A] = JsonObject[A *: EmptyTuple]
+
+trait Field(value: String)
+
+type Nullable[A] = Either[JsonNull, A]
+
+def getNullable[A]: Nullable[A] => Option[A] = _.fold[Option[A]](_ => None, Some(_))
+def getOptionalNullable[A, B]: Option[(A, Nullable[B])] => Option[(A, B)] = _.flatMap{
+  case (a, nullableB) => getNullable(nullableB).map(a -> )
+}

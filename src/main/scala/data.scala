@@ -5,17 +5,49 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
+import json.{JsonObject, Nullable}
 
 object data {
 
   type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
+  case class Email(value: String)
+  object Email:
+    given Decoder[Email] = Decoder[String].map(Email(_))
+  case class Password(value: String)
+  object Password:
+    given Decoder[Password] = Decoder[String].map(Password(_))
+
+  case class Username(value: String)
+  object Username:
+    given Decoder[Username] = Decoder[String].map(Username(_))
+
+  case class Bio(value: String)
+  object Bio:
+    given Decoder[Bio] = Decoder[String].map(Bio(_))
+
+  case class Image(value: String)
+  object Image:
+    given Decoder[Image] = Decoder[String].map(Image(_))
+
+  object JsonCodec {
+    type User[T] = JsonObject.Solo[("user", T)]
+    type AuthenticateUser = JsonObject[(("email", Email), ("password", Password))]
+    type RegisterUser = JsonObject[(("username", Username), ("email", Email), ("password", Password))]
+    type UpdateUser = JsonObject[(
+      Option[("username", Nullable[Username])], 
+      Option[("email", Nullable[Email])], 
+      Option[("password", Nullable[Password])], 
+      Option[("bio", Nullable[Bio])], 
+      Option[("image", Nullable[Image])], 
+    )]
+  }
 
   object RequestBodies {
     case class WrappedUserBody[T](user: T) derives Decoder
-
     case class AuthenticateUserBody(email: String, password: String)
-        derives Decoder
+
+
     case class RegisterUserBody(
         username: String,
         email: String,
@@ -28,6 +60,17 @@ object data {
         bio: Option[String],
         image: Option[String]
     ) derives Decoder
+    object UpdateUserBody:
+      def fromCodec: JsonCodec.UpdateUser => UpdateUserBody = {
+        case JsonObject((maybeUsername, maybeEmail, maybePassword, maybeBio, maybeImage)) => UpdateUserBody(
+          username = getUsername(maybeUsername),
+          email = ???,
+          password = ???,
+          bio = ???,
+          image = ???
+        )
+      }
+      def getUsername: Option[("username", Nullable[Username])] => Option[String] = ???
     case class WrappedArticleBody[T](article: T)
     case class CreateArticleBody(
         title: String,
