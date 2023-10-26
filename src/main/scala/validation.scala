@@ -4,7 +4,6 @@ import cats.data.*
 import cats.data.Validated.*
 import cats.implicits.*
 import io.rw.app.data.RequestBodies.*
-import io.rw.app.data.*
 
 object valiation {
 
@@ -47,12 +46,20 @@ object valiation {
 
   type ValidationResult[A] = ValidatedNec[InvalidField, A]
 
-//  def validAuthenticateUserBody(
-//
-//  ): ValidationResult[AuthenticateUserBody] =
-//    (validEmail(email), password.validNec)
-//      .mapN(AuthenticateUserBody.apply)
+  def validAuthenticateUserBody(
+      body: AuthenticateUserBody
+  ): ValidationResult[AuthenticateUserBody] =
+    (validEmail(body.email), body.password.validNec)
+      .mapN(AuthenticateUserBody.apply)
 
+  def validRegisterUserBody(
+      body: RegisterUserBody
+  ): ValidationResult[RegisterUserBody] =
+    (
+      validUsername(body.username),
+      validEmail(body.email),
+      validPassword(body.password)
+    ).mapN(RegisterUserBody.apply)
 
   def validUpdateUserBody(
       body: UpdateUserBody
@@ -91,7 +98,6 @@ object valiation {
 
   import validators.*
   import InvalidFields.*
-  //TODO remove
   def validEmail(email: String): ValidationResult[String] = {
     val trimmedEmail = email.trim
     (
@@ -101,15 +107,10 @@ object valiation {
     ).mapN({ case t => t._1 }).leftMap(toInvalidField(_, InvalidEmail.apply(_)))
   }
 
-  val validEmail: Email => ValidationResult[Email] = { email =>
-    validEmail(email.value).as(email)
-  }
-
   def validPassword(password: String): ValidationResult[String] =
     (notBlank(password), min(password, 8), max(password, 100))
       .mapN({ case t => t._1 })
       .leftMap(toInvalidField(_, InvalidPassword.apply(_)))
-
 
   def validUsername(username: String): ValidationResult[String] = {
     val trimmedUsername = username.trim
@@ -120,8 +121,6 @@ object valiation {
     ).mapN({ case t => t._1 })
       .leftMap(toInvalidField(_, InvalidUsername.apply(_)))
   }
-  def usernameValueErrors(username: String): NonEmptyChain[InvalidField] = ???
-  def usernameErrors(username: Username): NonEmptyChain[InvalidField] = usernameValueErrors(username.value)
 
   def validTitle(title: String): ValidationResult[String] = {
     val trimmedTitle = title.trim

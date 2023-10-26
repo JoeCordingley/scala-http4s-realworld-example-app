@@ -5,34 +5,21 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
-import json.*
-import cats.syntax.all.*
 
 object data {
 
   type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
 
-  opaque type Email = String
-  object Email:
-    //TODO remove
-    def apply(s: String): Email = s
-    given Decoder[Email] = Decoder.decodeString.widen
-    extension (e: Email)
-      def value: String = e
-  case class Username(value: String)
-  object Username:
-    given Decoder[Username] = Decoder[String].map(Username(_))
-  case class Password(value: String)
-  object Password:
-    given Decoder[Password] = Decoder[String].map(Password(_))
-
   object RequestBodies {
-    type AuthenticateUserBody =
-      JsonObject[(("email", Email), ("password", Password))]
     case class WrappedUserBody[T](user: T) derives Decoder
-    //type WrappedUserBody[T] = SoloObj[("user", T)]
-    type RegisterUserBody = JsonObject[(("username", Username), ("email", Email), ("password", Password))]
+
+    case class AuthenticateUserBody(email: String, password: String) derives Decoder
+    case class RegisterUserBody(
+        username: String,
+        email: String,
+        password: String
+    ) derives Decoder
     case class UpdateUserBody(
         username: Option[String],
         email: Option[String],
@@ -58,8 +45,8 @@ object data {
 
   sealed trait ApiInput
   object ApiInputs {
-    case class AuthenticateUserInput(email: Email, password: Password)
-        extends ApiInput
+    case class AuthenticateUserInput(email: String, password: String)
+        extends ApiInput 
     case class RegisterUserInput(
         username: String,
         email: String,

@@ -10,7 +10,6 @@ import io.rw.app.valiation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
-import json.*
 
 object UserRoutes {
 
@@ -22,22 +21,21 @@ object UserRoutes {
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "users" / "login" as _ =>
         for {
-          WrappedUserBody(JsonObject(((_, email), (_, password)))) <- rq.req
-            .as[WrappedUserBody[AuthenticateUserBody]]
-          rs <- withValidation(validEmail(email)) { email =>
+          body <- rq.req.as[WrappedUserBody[AuthenticateUserBody]]
+          rs <- withValidation(validAuthenticateUserBody(body.user)) { valid =>
             users
-              .authenticate(AuthenticateUserInput(email, password))
+              .authenticate(AuthenticateUserInput(valid.email, valid.password))
               .flatMap(toResponse(_))
           }
         } yield rs
 
       case rq @ POST -> Root / "users" as _ =>
         for {
-          WrappedUserBody(JsonObject(((_, username), (_, email), (_, passord)))) <- rq.req.as[WrappedUserBody[RegisterUserBody]]
-          rs <- withValidation((validUsername(username), validEmail(email), validPassword(password)).tupled) { case (username, email, password) =>
+          body <- rq.req.as[WrappedUserBody[RegisterUserBody]]
+          rs <- withValidation(validRegisterUserBody(body.user)) { valid =>
             users
               .register(
-                RegisterUserInput(username, email, password)
+                RegisterUserInput(valid.username, valid.email, valid.password)
               )
               .flatMap(toResponse(_))
           }

@@ -5,11 +5,10 @@ import doobie.*
 import doobie.implicits.*
 import doobie.implicits.legacy.instant.*
 import io.rw.app.data.Entities.*
-import io.rw.app.data.Email
 
 trait UserRepo[F[_]] {
   def findUserById(id: Int): F[Option[WithId[User]]]
-  def findUserByEmail(email: Email): F[Option[WithId[User]]]
+  def findUserByEmail(email: String): F[Option[WithId[User]]]
   def findUserByUsername(username: String): F[Option[WithId[User]]]
   def createUser(user: User): F[WithId[User]]
   def updateUser(id: Int, user: UserForUpdate): F[WithId[User]]
@@ -21,7 +20,7 @@ object UserRepo {
     def findUserById(id: Int): IO[Option[WithId[User]]] =
       Q.selectUserById(id).option.transact(xa)
 
-    def findUserByEmail(email: Email): IO[Option[WithId[User]]] =
+    def findUserByEmail(email: String): IO[Option[WithId[User]]] =
       Q.selectUserByEmail(email).option.transact(xa)
 
     def findUserByUsername(username: String): IO[Option[WithId[User]]] =
@@ -64,11 +63,11 @@ object UserRepo {
          where id = $id
       """.query[WithId[User]]
 
-    def selectUserByEmail(email: Email) =
+    def selectUserByEmail(email: String) =
       sql"""
          select id, email, username, password, bio, image, created_at, updated_at
          from users
-         where email = ${email.value}
+         where email = $email
       """.query[WithId[User]]
 
     def selectUserByUsername(username: String) =

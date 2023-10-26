@@ -35,7 +35,7 @@ object UserApis {
         userWithId <- OptionT(userRepo.findUserByEmail(input.email))
         _ <- OptionT(
           passwordHasher
-            .validate(input.password.value, userWithId.entity.password)
+            .validate(input.password, userWithId.entity.password)
             .map(if (_) Some(true) else None)
         )
         token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
@@ -63,9 +63,7 @@ object UserApis {
       }
 
       val userWithToken = for {
-        _ <- EitherT(
-          emailAndUsernameNotExist(Email(input.email), input.username)
-        )
+        _ <- EitherT(emailAndUsernameNotExist(input.email, input.username))
         hashedPsw <- EitherT.liftF(passwordHasher.hash(input.password))
         userWithId <- EitherT.liftF(
           userRepo.createUser(mkUserEntity(hashedPsw))
@@ -106,7 +104,7 @@ object UserApis {
 
       val userWithToken = for {
         _ <- input.email.traverse(e =>
-          EitherT(emailNotTakenByOthers(Email(e), input.authUser))
+          EitherT(emailNotTakenByOthers(e, input.authUser))
         )
         _ <- input.username.traverse(u =>
           EitherT(usernameNotTakenByOthers(u, input.authUser))
@@ -124,7 +122,7 @@ object UserApis {
     }
 
     def emailAndUsernameNotExist(
-        email: Email,
+        email: String,
         username: String
     ): F[Either[ApiError, Boolean]] = {
       val notExists = for {
@@ -141,7 +139,7 @@ object UserApis {
     ): Either[ApiError, Boolean] =
       if (user.isEmpty) Right(true) else Left(error)
 
-    def emailNotExists(email: Email): F[Either[ApiError, Boolean]] =
+    def emailNotExists(email: String): F[Either[ApiError, Boolean]] =
       userRepo.findUserByEmail(email).map(notExists(_, EmailAlreadyExists()))
 
     def usernameNotExists(username: String): F[Either[ApiError, Boolean]] =
@@ -159,7 +157,7 @@ object UserApis {
       else Left(error)
 
     def emailNotTakenByOthers(
-        email: Email,
+        email: String,
         authUser: AuthUser
     ): F[Either[ApiError, Boolean]] =
       userRepo
