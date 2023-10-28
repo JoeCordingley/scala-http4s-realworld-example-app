@@ -5,54 +5,65 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
-import json.{JsonObject, Nullable}
+import json.{JsonObject, Nullable, oNValue, JsonNull, given}
 
 object data {
 
   type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
-  case class Email(value: String)
-  object Email:
-    given Decoder[Email] = Decoder[String].map(Email(_))
-  case class Password(value: String)
-  object Password:
-    given Decoder[Password] = Decoder[String].map(Password(_))
-
-  case class Username(value: String)
-  object Username:
-    given Decoder[Username] = Decoder[String].map(Username(_))
-
-  case class Bio(value: String)
-  object Bio:
-    given Decoder[Bio] = Decoder[String].map(Bio(_))
-
-  case class Image(value: String)
-  object Image:
-    given Decoder[Image] = Decoder[String].map(Image(_))
 
   object JsonCodec {
     type User[T] = JsonObject.Solo[("user", T)]
-    type AuthenticateUser = JsonObject[(("email", Email), ("password", Password))]
-    type RegisterUser = JsonObject[(("username", Username), ("email", Email), ("password", Password))]
-    type UpdateUser = JsonObject[(
-      Option[("username", Nullable[Username])], 
-      Option[("email", Nullable[Email])], 
-      Option[("password", Nullable[Password])], 
-      Option[("bio", Nullable[Bio])], 
-      Option[("image", Nullable[Image])], 
-    )]
+
+    type AuthenticateUser =
+      JsonObject[(("email", String), ("password", String))]
+    type RegisterUser = JsonObject[
+      (("username", String), ("email", String), ("password", String))
+    ]
+    type UpdateUser = JsonObject[
+      (
+          Option[("username", Nullable[String])],
+          Option[("email", Nullable[String])],
+          Option[("password", Nullable[String])],
+          Option[("bio", Nullable[String])],
+          Option[("image", Nullable[String])],
+      )
+    ]
+    type UpdateArticle = JsonObject[
+      (
+          Option[("title", Nullable[String])],
+          Option[("description", Nullable[String])],
+          Option[("body", Nullable[String])]
+      )
+    ]
+
+    type Article[T] = JsonObject.Solo[("article", T)]
+
   }
 
   object RequestBodies {
-    case class WrappedUserBody[T](user: T) derives Decoder
     case class AuthenticateUserBody(email: String, password: String)
-
+    object AuthenticateUserBody {
+      def fromCodec: JsonCodec.AuthenticateUser => AuthenticateUserBody = {
+        case JsonObject((("email", email), ("password", password))) =>
+          AuthenticateUserBody(email, password)
+      }
+    }
 
     case class RegisterUserBody(
         username: String,
         email: String,
         password: String
-    ) derives Decoder
+    )
+    object RegisterUserBody {
+      def fromCodec: JsonCodec.RegisterUser => RegisterUserBody = {
+        case JsonObject(
+              (("username", username), ("email", email), ("password", password))
+            ) =>
+          RegisterUserBody(username, email, password)
+      }
+    }
+
     case class UpdateUserBody(
         username: Option[String],
         email: Option[String],
@@ -60,17 +71,20 @@ object data {
         bio: Option[String],
         image: Option[String]
     ) derives Decoder
+
     object UpdateUserBody:
       def fromCodec: JsonCodec.UpdateUser => UpdateUserBody = {
-        case JsonObject((maybeUsername, maybeEmail, maybePassword, maybeBio, maybeImage)) => UpdateUserBody(
-          username = getUsername(maybeUsername),
-          email = ???,
-          password = ???,
-          bio = ???,
-          image = ???
-        )
+        case JsonObject(
+              (maybeUsername, maybeEmail, maybePassword, maybeBio, maybeImage)
+            ) =>
+          UpdateUserBody(
+            username = oNValue["username", String](maybeUsername),
+            email = oNValue["email", String](maybeEmail),
+            password = oNValue["password", String](maybePassword),
+            bio = oNValue["bio", String](maybeBio),
+            image = oNValue["image", String](maybeImage)
+          )
       }
-      def getUsername: Option[("username", Nullable[Username])] => Option[String] = ???
     case class WrappedArticleBody[T](article: T)
     case class CreateArticleBody(
         title: String,
@@ -83,6 +97,15 @@ object data {
         description: Option[String],
         body: Option[String]
     )
+    object UpdateArticleBody:
+      def fromCodec: JsonCodec.UpdateArticle => UpdateArticleBody = {
+        case JsonObject(maybeTitle, maybeDescription, maybeBody) =>
+          UpdateArticleBody(
+            title = oNValue["title", String](maybeTitle),
+            description = oNValue["description", String](maybeDescription),
+            body = oNValue["body", String](maybeBody)
+          )
+      }
     case class WrappedCommentBody[T](comment: T)
     case class AddCommentBody(body: String)
   }

@@ -22,9 +22,10 @@ object JsonMember:
       f: JsonFieldEncoder[K]
   ): Decoder[JsonMember[(K, V)]] =
     Decoder[V].at(f.encode).map(v => JsonMember(f.decode -> v))
+
   given opt[K, V: Decoder](using
       f: JsonFieldEncoder[K]
-  ): Decoder[JsonMember[Option[(K, V)]]] = _.field(f.encode).success
+  ): Decoder[JsonMember[Option[(K, V)]]] = _.downField(f.encode).success
     .traverse(_.as[V].map(f.decode -> _))
     .map(JsonMember(_))
 
@@ -42,7 +43,6 @@ object JsonFieldEncoder:
     def encode: String = summon[ValueOf[A]].value
     def decode: A = summon[ValueOf[A]].value
 
-
 case class JsonObject[A](pairs: A)
 
 object JsonObject:
@@ -58,6 +58,7 @@ object JsonObject:
       case (JsonMember(a), JsonObject(t)) => JsonObject(a *: t)
     }
   type Solo[A] = JsonObject[A *: EmptyTuple]
+  def getSoloValue[K, V]: Solo[(K, V)] => V = _.pairs.head._2
 
 trait JsonMembersEncoder[A]:
   def encode(a: A): List[(String, Json)]
@@ -87,7 +88,11 @@ trait Field(value: String)
 
 type Nullable[A] = Either[JsonNull, A]
 
-def getNullable[A]: Nullable[A] => Option[A] = _.fold[Option[A]](_ => None, Some(_))
-def getOptionalNullable[A, B]: Option[(A, Nullable[B])] => Option[(A, B)] = _.flatMap{
-  case (a, nullableB) => getNullable(nullableB).map(a -> )
-}
+def getNullable[A]: Nullable[A] => Option[A] =
+  _.fold[Option[A]](_ => None, Some(_))
+def getOptionalNullable[A, B]: Option[(A, Nullable[B])] => Option[(A, B)] =
+  _.flatMap { case (a, nullableB) =>
+    getNullable(nullableB).map(a -> _)
+  }
+def oNValue[A, B]: Option[(A, Nullable[B])] => Option[B] =
+  getOptionalNullable(_).map(_._2)

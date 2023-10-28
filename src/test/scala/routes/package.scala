@@ -20,6 +20,7 @@ import org.typelevel.ci.CIString
 
 package object routes {
 
+  case class WrappedUserBody[T](user: T)
   import io.rw.app.data.RequestBodies.RegisterUserBody
 
   val key = HMACSHA256.unsafeBuildKey("secret_key".getBytes)

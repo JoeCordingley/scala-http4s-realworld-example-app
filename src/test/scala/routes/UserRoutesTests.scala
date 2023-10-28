@@ -22,6 +22,7 @@ import cats.effect.unsafe.implicits.global
 
 object UserRoutesTests extends WithEmbededDbTestSuite {
 
+  case class WrappedUserBody[T](user: T)
   val tests = Tests {
     test("register") {
       test("new user should register and get valid token back") {

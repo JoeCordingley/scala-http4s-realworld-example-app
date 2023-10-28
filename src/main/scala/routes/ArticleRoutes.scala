@@ -11,6 +11,7 @@ import io.rw.app.valiation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
+import json.JsonObject
 
 object ArticleRoutes {
 
@@ -78,9 +79,13 @@ object ArticleRoutes {
 
       case rq @ PUT -> Root / "articles" / slug as authUser =>
         for {
-          body <- rq.req.as[WrappedArticleBody[UpdateArticleBody]]
+          body <- rq.req.as[JsonCodec.Article[JsonCodec.UpdateArticle]]
           rs <- withAuthUser(authUser) { u =>
-            withValidation(validUpdateArticleBody(body.article)) { valid =>
+            withValidation(
+              validUpdateArticleBody(
+                UpdateArticleBody.fromCodec(JsonObject.getSoloValue(body))
+              )
+            ) { valid =>
               articles
                 .update(
                   UpdateArticleInput(
