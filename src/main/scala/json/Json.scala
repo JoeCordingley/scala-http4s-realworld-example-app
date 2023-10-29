@@ -95,5 +95,5 @@ def getOptionalNullable[A, B]: Option[(A, Nullable[B])] => Option[(A, B)] =
     getNullable(nullableB).map(a -> _)
   }
 
-def oNValue[A]: [B] => Option[(A, Nullable[B])] => Option[B] = [B] => (x: Option[(A, Nullable[B])]) => getOptionalNullable(x).map(_._2)
-  
+def oNValue[A]: [B] => Option[(A, Nullable[B])] => Option[B] = [B] =>
+  (x: Option[(A, Nullable[B])]) => getOptionalNullable(x).map(_._2)

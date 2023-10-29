@@ -2,7 +2,6 @@ package io.rw.app.routes
 
 import cats.effect.Async
 import cats.implicits.*
-import io.circe.generic.auto.*
 import io.rw.app.apis.*
 import io.rw.app.data.*
 import io.rw.app.data.ApiInputs.*
@@ -11,7 +10,7 @@ import io.rw.app.valiation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
-import json.JsonObject
+import json.{JsonObject, given}
 
 object ArticleRoutes {
 

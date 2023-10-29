@@ -5,7 +5,7 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
-import json.{JsonObject, Nullable, oNValue, JsonNull, given}
+import json.{JsonObject, Nullable, oNValue, JsonNull}
 
 object data {
 
@@ -85,13 +85,13 @@ object data {
             image = oNValue["image"](maybeImage)
           )
       }
-    case class WrappedArticleBody[T](article: T)
+    case class WrappedArticleBody[T](article: T) derives Decoder
     case class CreateArticleBody(
         title: String,
         description: String,
         body: String,
         tagList: Option[List[String]]
-    )
+    ) derives Decoder
     case class UpdateArticleBody(
         title: Option[String],
         description: Option[String],
@@ -175,32 +175,35 @@ object data {
     case class GetTagsInput() extends ApiInput
   }
 
-  sealed trait ApiOutput
   object ApiOutputs {
     case class AuthenticateUserOutput(user: User) derives Encoder.AsObject
     case class RegisterUserOutput(user: User) derives Encoder.AsObject
     case class GetUserOutput(user: User) derives Encoder.AsObject
     case class UpdateUserOutput(user: User) derives Encoder.AsObject
-    case class GetProfileOutput(profile: Profile) extends ApiOutput
-    case class FollowUserOutput(profile: Profile) extends ApiOutput
-    case class UnfollowUserOutput(profile: Profile) extends ApiOutput
+    case class GetProfileOutput(profile: Profile)
+    case class FollowUserOutput(profile: Profile)
+    case class UnfollowUserOutput(profile: Profile)
     case class GetAllArticlesOutput(articles: List[Article], articlesCount: Int)
-        extends ApiOutput
+    object GetAllArticlesOutput:
+      given Encoder[GetAllArticlesOutput] = deriveEncoder
     case class GetArticlesFeedOutput(
         articles: List[Article],
         articlesCount: Int
-    ) extends ApiOutput
-    case class GetArticleOutput(article: Article) extends ApiOutput
-    case class CreateArticleOutput(article: Article) extends ApiOutput
-    case class UpdateArticleOutput(article: Article) extends ApiOutput
-    case class DeleteArticleOutput() extends ApiOutput
-    case class FavoriteArticleOutput(article: Article) extends ApiOutput
-    case class UnfavoriteArticleOutput(article: Article) extends ApiOutput
-    case class AddCommentOutput(comment: Comment) extends ApiOutput
-    case class GetCommentsOutput(comments: List[Comment]) extends ApiOutput
+    )
+    object GetArticlesFeedOutput:
+      given Encoder[GetArticlesFeedOutput] = deriveEncoder
+    case class GetArticleOutput(article: Article) derives Encoder.AsObject
+    case class CreateArticleOutput(article: Article) derives Encoder.AsObject
+    case class UpdateArticleOutput(article: Article) derives Encoder.AsObject
+    case class DeleteArticleOutput() derives Encoder.AsObject
+    case class FavoriteArticleOutput(article: Article) derives Encoder.AsObject
+    case class UnfavoriteArticleOutput(article: Article)
+        derives Encoder.AsObject
+    case class AddCommentOutput(comment: Comment)
+    case class GetCommentsOutput(comments: List[Comment])
     // TODO return {} instead of null
-    case class DeleteCommentOutput() extends ApiOutput
-    case class GetTagsOutput(tags: List[String]) extends ApiOutput
+    case class DeleteCommentOutput()
+    case class GetTagsOutput(tags: List[String])
   }
 
   sealed trait ApiError
@@ -293,7 +296,7 @@ object data {
       bio: Option[String],
       image: Option[String],
       following: Boolean
-  )
+  ) derives Encoder.AsObject
   case class Article(
       slug: String,
       title: String,
@@ -305,7 +308,7 @@ object data {
       favorited: Boolean,
       favoritesCount: Int,
       author: Profile
-  )
+  ) derives Encoder.AsObject
   case class Comment(
       id: Int,
       createdAt: Instant,
