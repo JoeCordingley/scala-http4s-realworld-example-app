@@ -78,11 +78,11 @@ object data {
               (maybeUsername, maybeEmail, maybePassword, maybeBio, maybeImage)
             ) =>
           UpdateUserBody(
-            username = oNValue["username", String](maybeUsername),
-            email = oNValue["email", String](maybeEmail),
-            password = oNValue["password", String](maybePassword),
-            bio = oNValue["bio", String](maybeBio),
-            image = oNValue["image", String](maybeImage)
+            username = oNValue["username"](maybeUsername),
+            email = oNValue["email"](maybeEmail),
+            password = oNValue["password"](maybePassword),
+            bio = oNValue["bio"](maybeBio),
+            image = oNValue["image"](maybeImage)
           )
       }
     case class WrappedArticleBody[T](article: T)
@@ -101,9 +101,9 @@ object data {
       def fromCodec: JsonCodec.UpdateArticle => UpdateArticleBody = {
         case JsonObject(maybeTitle, maybeDescription, maybeBody) =>
           UpdateArticleBody(
-            title = oNValue["title", String](maybeTitle),
-            description = oNValue["description", String](maybeDescription),
-            body = oNValue["body", String](maybeBody)
+            title = oNValue["title"](maybeTitle),
+            description = oNValue["description"](maybeDescription),
+            body = oNValue["body"](maybeBody)
           )
       }
     case class WrappedCommentBody[T](comment: T)
