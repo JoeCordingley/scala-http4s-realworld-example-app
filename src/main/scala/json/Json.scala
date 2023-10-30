@@ -88,6 +88,9 @@ trait Field(value: String)
 
 type Nullable[A] = Either[JsonNull, A]
 
+object Nullable:
+  def fromOption[A]: Option[A] => Nullable[A] = _.fold(Left(JsonNull))(Right(_))
+
 def getNullable[A]: Nullable[A] => Option[A] =
   _.fold[Option[A]](_ => None, Some(_))
 def getOptionalNullable[A, B]: Option[(A, Nullable[B])] => Option[(A, B)] =

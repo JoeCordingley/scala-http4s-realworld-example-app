@@ -31,6 +31,9 @@ object UserRoutes {
           ) { valid =>
             users
               .authenticate(AuthenticateUserInput(valid.email, valid.password))
+              .map(
+                _.map(output => User.wrapUser(UserOutput.fromUser(output.user)))
+              )
               .flatMap(toResponse(_))
           }
         } yield rs

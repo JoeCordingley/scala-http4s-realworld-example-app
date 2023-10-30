@@ -14,6 +14,8 @@ object data {
 
   object JsonCodec {
     type User[T] = JsonObject.Solo[("user", T)]
+    object User:
+      def wrapUser[T]: T => User[T] = t => JsonObject(("user", t) *: EmptyTuple)
 
     type AuthenticateUser =
       JsonObject[(("email", String), ("password", String))]
@@ -36,9 +38,30 @@ object data {
           Option[("body", Nullable[String])]
       )
     ]
-
     type Article[T] = JsonObject.Solo[("article", T)]
 
+    type UserOutput = JsonObject[
+      (
+          ("email", String),
+          ("token", String),
+          ("username", String),
+          ("bio", Nullable[String]),
+          ("image", Nullable[String]),
+      )
+    ]
+    object UserOutput:
+      def fromUser: data.User => UserOutput = {
+        case data.User(email, token, username, bio, image) =>
+          JsonObject(
+            (
+              ("email", email),
+              ("token", token),
+              ("username", username),
+              ("bio", Nullable.fromOption(bio)),
+              ("image", Nullable.fromOption(image))
+            )
+          )
+      }
   }
 
   object RequestBodies {
@@ -176,7 +199,7 @@ object data {
   }
 
   object ApiOutputs {
-    case class AuthenticateUserOutput(user: User) derives Encoder.AsObject
+    case class AuthenticateUserOutput(user: User)
     case class RegisterUserOutput(user: User) derives Encoder.AsObject
     case class GetUserOutput(user: User) derives Encoder.AsObject
     case class UpdateUserOutput(user: User) derives Encoder.AsObject

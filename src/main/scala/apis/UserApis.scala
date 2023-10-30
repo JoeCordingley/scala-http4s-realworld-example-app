@@ -11,6 +11,7 @@ import io.rw.app.repos.*
 import io.rw.app.security.{JwtToken, PasswordHasher}
 import java.time.Instant
 
+//TODO just return users
 trait UserApis[F[_]] {
   def authenticate(
       input: AuthenticateUserInput
