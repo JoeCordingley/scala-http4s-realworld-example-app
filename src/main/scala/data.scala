@@ -5,7 +5,7 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
-import json.{JsonObject, Nullable, oNValue, JsonNull}
+import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray}
 
 object data {
 
@@ -39,6 +39,52 @@ object data {
       )
     ]
     type Article[T] = JsonObject.Solo[("article", T)]
+
+    type ArticleOutput = JsonObject[(
+      ("slug", String),
+      ("title", String),
+      ("description", String),
+      ("body", String),
+      ("tagList", JsonArray[String]),
+      ("createdAt", Instant),
+      ("updatedAt", Instant),
+      ("favorited", Boolean),
+      ("favoritesCount", Int),
+      ("author", Profile),
+    )]
+    object ArticleOutput:
+      def fromArticle: data.Article => ArticleOutput = {
+        case data.Article(slug, title, description, body, tagList, createdAt, updatedAt, favorited, favoritesCount, author) => 
+          JsonObject(
+            ("slug", slug),
+            ("title", title),
+            ("description", description),
+            ("body", body),
+            ("tagList", JsonArray(tagList)),
+            ("createdAt", createdAt),
+            ("updatedAt", updatedAt),
+            ("favorited", favorited),
+            ("favoritesCount", favoritesCount),
+            ("author", Profile.fromProfile(author)),
+          )
+      }
+    type Profile = JsonObject[(
+      ("username", String),
+      ("bio", Nullable[String]),
+      ("image", Nullable[String]),
+      ("following", Boolean),
+    )]
+    
+    object Profile:
+      def fromProfile: data.Profile => Profile = {
+        case data.Profile(username, maybeBio, maybeImage, following) => 
+          JsonObject(
+            ("username", username),
+            ("bio", Nullable.fromOption(maybeBio)),
+            ("image", Nullable.fromOption(maybeImage)),
+            ("following", following),
+            )
+      }
 
     type UserOutput = JsonObject[
       (
@@ -199,10 +245,11 @@ object data {
   }
 
   object ApiOutputs {
+    // TODO move to test
     case class AuthenticateUserOutput(user: User)
-    case class RegisterUserOutput(user: User) derives Encoder.AsObject
-    case class GetUserOutput(user: User) derives Encoder.AsObject
-    case class UpdateUserOutput(user: User) derives Encoder.AsObject
+    case class RegisterUserOutput(user: User)
+    case class GetUserOutput(user: User)
+    case class UpdateUserOutput(user: User)
     case class GetProfileOutput(profile: Profile)
     case class FollowUserOutput(profile: Profile)
     case class UnfollowUserOutput(profile: Profile)

@@ -11,14 +11,14 @@ import io.rw.app.repos.*
 import io.rw.app.security.{JwtToken, PasswordHasher}
 import java.time.Instant
 
-//TODO just return users
+//TODO ApiResult to F
 trait UserApis[F[_]] {
   def authenticate(
       input: AuthenticateUserInput
-  ): F[ApiResult[AuthenticateUserOutput]]
-  def register(input: RegisterUserInput): F[ApiResult[RegisterUserOutput]]
-  def get(input: GetUserInput): F[ApiResult[GetUserOutput]]
-  def update(input: UpdateUserInput): F[ApiResult[UpdateUserOutput]]
+  ): F[ApiResult[User]]
+  def register(input: RegisterUserInput): F[ApiResult[User]]
+  def get(input: GetUserInput): F[ApiResult[User]]
+  def update(input: UpdateUserInput): F[ApiResult[User]]
 }
 
 object UserApis {
@@ -27,11 +27,11 @@ object UserApis {
       passwordHasher: PasswordHasher[F],
       token: JwtToken[F],
       userRepo: UserRepo[F]
-  ) = new UserApis[F]() {
+  ) = new UserApis[F] {
 
     def authenticate(
         input: AuthenticateUserInput
-    ): F[ApiResult[AuthenticateUserOutput]] = {
+    ): F[ApiResult[User]] = {
       val userWithToken = for {
         userWithId <- OptionT(userRepo.findUserByEmail(input.email))
         _ <- OptionT(
@@ -43,13 +43,13 @@ object UserApis {
       } yield mkUser(userWithId.entity, token)
 
       userWithToken.value.map(
-        _.map(AuthenticateUserOutput.apply).toRight(
+        _.toRight(
           UserNotFoundOrPasswordNotMatched()
         )
       )
     }
 
-    def register(input: RegisterUserInput): F[ApiResult[RegisterUserOutput]] = {
+    def register(input: RegisterUserInput): F[ApiResult[User]] = {
       def mkUserEntity(hashedPassword: String): E.User = {
         val now = Instant.now
         E.User(
@@ -74,21 +74,21 @@ object UserApis {
         )
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(_.map(RegisterUserOutput.apply))
+      userWithToken.value
     }
 
-    def get(input: GetUserInput): F[ApiResult[GetUserOutput]] = {
+    def get(input: GetUserInput): F[ApiResult[User]] = {
       val userWithToken = for {
         userWithId <- OptionT(userRepo.findUserById(input.authUser))
         token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
       } yield mkUser(userWithId.entity, token)
 
       userWithToken.value.map(
-        _.map(GetUserOutput.apply).toRight(UserNotFound())
+        _.toRight(UserNotFound())
       )
     }
 
-    def update(input: UpdateUserInput): F[ApiResult[UpdateUserOutput]] = {
+    def update(input: UpdateUserInput): F[ApiResult[User]] = {
       def mkUserForUpdateEntity(
           hashedPassword: Option[String]
       ): E.UserForUpdate = {
@@ -119,7 +119,7 @@ object UserApis {
         )
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(_.map(UpdateUserOutput.apply))
+      userWithToken.value
     }
 
     def emailAndUsernameNotExist(
