@@ -7,10 +7,12 @@ import io.rw.app.apis.*
 import io.rw.app.data.AuthUser
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.RequestBodies.*
+import io.rw.app.data.JsonCodec
 import io.rw.app.valiation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
+import json.JsonObject
 
 object CommentRoutes {
 
@@ -22,9 +24,16 @@ object CommentRoutes {
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "articles" / slug / "comments" as authUser =>
         for {
-          body <- rq.req.as[WrappedCommentBody[AddCommentBody]]
+          body <- rq.req.as[JsonCodec.WrappedComment[JsonCodec.Body]]
           rs <- withAuthUser(authUser) { u =>
-            withValidation(validAddCommentBody(body.comment)) { valid =>
+            // TODO extension methods
+            withValidation(
+              validAddCommentBody(
+                AddCommentBody(
+                  JsonObject.getSoloValue(JsonObject.getSoloValue(body))
+                )
+              )
+            ) { valid =>
               comments
                 .add(AddCommentInput(u, slug, valid.body))
                 .flatMap(toResponse(_))

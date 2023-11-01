@@ -148,7 +148,8 @@ object data {
           Option[("tagList", Nullable[JsonArray[String]])],
       )
     ]
-
+    type WrappedComment[T] = JsonObject.Solo[("comment", T)]
+    type Body = JsonObject.Solo[("body", String)]
   }
 
   object RequestBodies {
