@@ -118,7 +118,7 @@ object data {
       )
     ]
     object User:
-      def fromUser: data.User => User = {
+      def fromData: data.User => User = {
         case data.User(email, token, username, bio, image) =>
           JsonObject(
             (

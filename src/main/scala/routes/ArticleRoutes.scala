@@ -1,5 +1,6 @@
 package io.rw.app.routes
 
+import cats.Functor
 import cats.effect.Async
 import cats.implicits.*
 import io.rw.app.apis.*
@@ -13,6 +14,10 @@ import org.http4s.dsl.Http4sDsl
 import json.{JsonObject, given}
 
 object ArticleRoutes {
+
+  def toArticleOutput[F[_]: Functor]
+      : F[Article] => F[JsonCodec.WrappedArticle[JsonCodec.Article]] =
+    _.map(JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData)
 
   def apply[F[_]: Async](articles: ArticleApis[F]): AppRoutes[F] = {
 
@@ -39,7 +44,7 @@ object ArticleRoutes {
         articles
           .getAll(rq)
           .map(_.map(JsonCodec.GetArticlesOutput.fromData))
-          .flatMap(toResponse(_))
+          .flatMap(toResponse)
       }
 
       case GET -> Root / "articles" / "feed" :? Limit(limit) +& Offset(
@@ -54,18 +59,14 @@ object ArticleRoutes {
               )
             )
             .map(_.map(JsonCodec.GetArticlesOutput.fromData))
-            .flatMap(toResponse(_))
+            .flatMap(toResponse)
         }
 
       case GET -> Root / "articles" / slug as authUser =>
         articles
           .get(GetArticleInput(authUser, slug))
-          .map(
-            _.map(
-              JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
-            )
-          )
-          .flatMap(toResponse(_))
+          .map(toArticleOutput)
+          .flatMap(toResponse)
 
       case rq @ POST -> Root / "articles" as authUser =>
         for {
@@ -86,12 +87,8 @@ object ArticleRoutes {
                     valid.tagList.getOrElse(List.empty)
                   )
                 )
-                .map(
-                  _.map(
-                    JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
-                  )
-                )
-                .flatMap(toResponse(_))
+                .map(toArticleOutput)
+                .flatMap(toResponse)
             }
           }
         } yield rs
@@ -115,12 +112,8 @@ object ArticleRoutes {
                     valid.body
                   )
                 )
-                .map(
-                  _.map(
-                    JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
-                  )
-                )
-                .flatMap(toResponse(_))
+                .map(toArticleOutput)
+                .flatMap(toResponse)
             }
           }
         } yield rs
@@ -130,31 +123,23 @@ object ArticleRoutes {
           articles
             .delete(DeleteArticleInput(u, slug))
             .map(_.as(JsonObject.empty))
-            .flatMap(toResponse(_))
+            .flatMap(toResponse)
         }
 
       case POST -> Root / "articles" / slug / "favorite" as authUser =>
         withAuthUser(authUser) { u =>
           articles
             .favorite(FavoriteArticleInput(u, slug))
-            .map(
-              _.map(
-                JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
-              )
-            )
-            .flatMap(toResponse(_))
+            .map(toArticleOutput)
+            .flatMap(toResponse)
         }
 
       case DELETE -> Root / "articles" / slug / "favorite" as authUser =>
         withAuthUser(authUser) { u =>
           articles
             .unfavorite(UnfavoriteArticleInput(u, slug))
-            .map(
-              _.map(
-                JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
-              )
-            )
-            .flatMap(toResponse(_))
+            .map(toArticleOutput)
+            .flatMap(toResponse)
         }
     }
   }

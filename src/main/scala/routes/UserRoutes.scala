@@ -17,7 +17,7 @@ import json.{JsonObject, given}
 object UserRoutes {
   def toOutput[F[_]: Functor]
       : F[User] => F[JsonCodec.WrappedUser[JsonCodec.User]] =
-    _.map(JsonCodec.WrappedUser.apply compose JsonCodec.User.fromUser)
+    _.map(JsonCodec.WrappedUser.apply compose JsonCodec.User.fromData)
 
   def apply[F[_]: Async](users: UserApis[F]): AppRoutes[F] = {
 
