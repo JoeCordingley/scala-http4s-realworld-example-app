@@ -36,7 +36,10 @@ object ArticleRoutes {
           ArticleFilter(tag, author, favorited),
           Pagination(limit.getOrElse(10), offset.getOrElse(0))
         )
-        articles.getAll(rq).map(_.map(JsonCodec.GetArticlesOutput.fromData)).flatMap(toResponse(_))
+        articles
+          .getAll(rq)
+          .map(_.map(JsonCodec.GetArticlesOutput.fromData))
+          .flatMap(toResponse(_))
       }
 
       case GET -> Root / "articles" / "feed" :? Limit(limit) +& Offset(
@@ -55,15 +58,24 @@ object ArticleRoutes {
         }
 
       case GET -> Root / "articles" / slug as authUser =>
-        articles.get(GetArticleInput(authUser, slug))
-          .map(_.map(JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData))
+        articles
+          .get(GetArticleInput(authUser, slug))
+          .map(
+            _.map(
+              JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
+            )
+          )
           .flatMap(toResponse(_))
 
       case rq @ POST -> Root / "articles" as authUser =>
         for {
           body <- rq.req.as[JsonCodec.WrappedArticle[JsonCodec.CreateArticle]]
           rs <- withAuthUser(authUser) { u =>
-            withValidation(validCreateArticleBody(CreateArticleBody.fromCodec(JsonObject.getSoloValue(body)))) { valid =>
+            withValidation(
+              validCreateArticleBody(
+                CreateArticleBody.fromCodec(JsonObject.getSoloValue(body))
+              )
+            ) { valid =>
               articles
                 .create(
                   CreateArticleInput(
@@ -74,7 +86,11 @@ object ArticleRoutes {
                     valid.tagList.getOrElse(List.empty)
                   )
                 )
-                .map(_.map(JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData))
+                .map(
+                  _.map(
+                    JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
+                  )
+                )
                 .flatMap(toResponse(_))
             }
           }
@@ -99,7 +115,11 @@ object ArticleRoutes {
                     valid.body
                   )
                 )
-                .map(_.map(JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData))
+                .map(
+                  _.map(
+                    JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
+                  )
+                )
                 .flatMap(toResponse(_))
             }
           }
@@ -107,14 +127,21 @@ object ArticleRoutes {
 
       case DELETE -> Root / "articles" / slug as authUser =>
         withAuthUser(authUser) { u =>
-          articles.delete(DeleteArticleInput(u, slug)).map(_.as(JsonObject.empty)).flatMap(toResponse(_))
+          articles
+            .delete(DeleteArticleInput(u, slug))
+            .map(_.as(JsonObject.empty))
+            .flatMap(toResponse(_))
         }
 
       case POST -> Root / "articles" / slug / "favorite" as authUser =>
         withAuthUser(authUser) { u =>
           articles
             .favorite(FavoriteArticleInput(u, slug))
-            .map(_.map(JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData))
+            .map(
+              _.map(
+                JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
+              )
+            )
             .flatMap(toResponse(_))
         }
 
@@ -122,7 +149,11 @@ object ArticleRoutes {
         withAuthUser(authUser) { u =>
           articles
             .unfavorite(UnfavoriteArticleInput(u, slug))
-            .map(_.map(JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData))
+            .map(
+              _.map(
+                JsonCodec.WrappedArticle.apply compose JsonCodec.Article.fromData
+              )
+            )
             .flatMap(toResponse(_))
         }
     }

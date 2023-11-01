@@ -17,7 +17,8 @@ object data {
   object JsonCodec {
     type WrappedUser[T] = JsonObject.Solo[("user", T)]
     object WrappedUser:
-      def apply[T]: T => WrappedUser[T] = t => JsonObject(("user", t) *: EmptyTuple)
+      def apply[T]: T => WrappedUser[T] = t =>
+        JsonObject(("user", t) *: EmptyTuple)
 
     type AuthenticateUser =
       JsonObject[(("email", String), ("password", String))]
@@ -42,24 +43,38 @@ object data {
     ]
     type WrappedArticle[T] = JsonObject.Solo[("article", T)]
     object WrappedArticle:
-      def apply[T]: T => WrappedArticle[T] = t => JsonObject(("article", t) *: EmptyTuple)
+      def apply[T]: T => WrappedArticle[T] = t =>
+        JsonObject(("article", t) *: EmptyTuple)
 
-    type Article = JsonObject[(
-      ("slug", String),
-      ("title", String),
-      ("description", String),
-      ("body", String),
-      ("tagList", JsonArray[String]),
-      ("createdAt", Instant),
-      ("updatedAt", Instant),
-      ("favorited", Boolean),
-      ("favoritesCount", Int),
-      ("author", Profile),
-    )]
+    type Article = JsonObject[
+      (
+          ("slug", String),
+          ("title", String),
+          ("description", String),
+          ("body", String),
+          ("tagList", JsonArray[String]),
+          ("createdAt", Instant),
+          ("updatedAt", Instant),
+          ("favorited", Boolean),
+          ("favoritesCount", Int),
+          ("author", Profile),
+      )
+    ]
 
     object Article:
       def fromData: data.Article => Article = {
-        case data.Article(slug, title, description, body, tagList, createdAt, updatedAt, favorited, favoritesCount, author) => 
+        case data.Article(
+              slug,
+              title,
+              description,
+              body,
+              tagList,
+              createdAt,
+              updatedAt,
+              favorited,
+              favoritesCount,
+              author
+            ) =>
           JsonObject(
             ("slug", slug),
             ("title", title),
@@ -70,25 +85,27 @@ object data {
             ("updatedAt", updatedAt),
             ("favorited", favorited),
             ("favoritesCount", favoritesCount),
-            ("author", Profile.fromData(author)),
+            ("author", Profile.fromData(author))
           )
       }
-    type Profile = JsonObject[(
-      ("username", String),
-      ("bio", Nullable[String]),
-      ("image", Nullable[String]),
-      ("following", Boolean),
-    )]
-    
+    type Profile = JsonObject[
+      (
+          ("username", String),
+          ("bio", Nullable[String]),
+          ("image", Nullable[String]),
+          ("following", Boolean),
+      )
+    ]
+
     object Profile:
       def fromData: data.Profile => Profile = {
-        case data.Profile(username, maybeBio, maybeImage, following) => 
+        case data.Profile(username, maybeBio, maybeImage, following) =>
           JsonObject(
             ("username", username),
             ("bio", Nullable.fromOption(maybeBio)),
             ("image", Nullable.fromOption(maybeImage)),
-            ("following", following),
-            )
+            ("following", following)
+          )
       }
 
     type User = JsonObject[
@@ -113,21 +130,25 @@ object data {
             )
           )
       }
-    type GetArticlesOutput = JsonObject[(("articles", JsonArray[Article]), ("articlesCount", Int))]
+    type GetArticlesOutput =
+      JsonObject[(("articles", JsonArray[Article]), ("articlesCount", Int))]
     object GetArticlesOutput:
       def fromData: data.GetArticlesOutput => GetArticlesOutput = {
-        case data.GetArticlesOutput(articles, articlesCount) => JsonObject(
-          ("articles", JsonArray(articles.map(Article.fromData))),
-          ("articlesCount", articlesCount)
-        )
+        case data.GetArticlesOutput(articles, articlesCount) =>
+          JsonObject(
+            ("articles", JsonArray(articles.map(Article.fromData))),
+            ("articlesCount", articlesCount)
+          )
       }
-    type CreateArticle = JsonObject[(
-      ("title", String),
-      ("description", String),
-      ("body", String),
-      Option[("tagList", Nullable[JsonArray[String]])],
-    )]
-    
+    type CreateArticle = JsonObject[
+      (
+          ("title", String),
+          ("description", String),
+          ("body", String),
+          Option[("tagList", Nullable[JsonArray[String]])],
+      )
+    ]
+
   }
 
   object RequestBodies {
@@ -180,15 +201,21 @@ object data {
         description: String,
         body: String,
         tagList: Option[List[String]]
-    ) 
+    )
     object CreateArticleBody:
       def fromCodec: JsonCodec.CreateArticle => CreateArticleBody = {
         case JsonObject(
-          ("title", title),
-          ("description", description),
-          ("body", body),
-          maybeTagList
-        ) => CreateArticleBody(title, description, body, oNValue["tagList"](maybeTagList).map(_.elements))
+              ("title", title),
+              ("description", description),
+              ("body", body),
+              maybeTagList
+            ) =>
+          CreateArticleBody(
+            title,
+            description,
+            body,
+            oNValue["tagList"](maybeTagList).map(_.elements)
+          )
       }
     case class UpdateArticleBody(
         title: Option[String],
@@ -294,7 +321,7 @@ object data {
     case class CreateArticleOutput(article: Article)
     case class UpdateArticleOutput(article: Article)
     case class DeleteArticleOutput()
-    case class FavoriteArticleOutput(article: Article) 
+    case class FavoriteArticleOutput(article: Article)
     case class UnfavoriteArticleOutput(article: Article)
     case class AddCommentOutput(comment: Comment)
     case class GetCommentsOutput(comments: List[Comment])
