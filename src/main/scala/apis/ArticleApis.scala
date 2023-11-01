@@ -13,16 +13,16 @@ import java.time.Instant
 import io.rw.app.data
 
 trait ArticleApis[F[_]] {
-  def getAll(input: GetAllArticlesInput): F[ApiResult[GetAllArticlesOutput]]
-  def getFeed(input: GetArticlesFeedInput): F[ApiResult[GetArticlesFeedOutput]]
-  def get(input: GetArticleInput): F[ApiResult[GetArticleOutput]]
-  def create(input: CreateArticleInput): F[ApiResult[CreateArticleOutput]]
-  def update(input: UpdateArticleInput): F[ApiResult[UpdateArticleOutput]]
-  def delete(input: DeleteArticleInput): F[ApiResult[DeleteArticleOutput]]
-  def favorite(input: FavoriteArticleInput): F[ApiResult[FavoriteArticleOutput]]
+  def getAll(input: GetAllArticlesInput): F[ApiResult[GetArticlesOutput]]
+  def getFeed(input: GetArticlesFeedInput): F[ApiResult[GetArticlesOutput]]
+  def get(input: GetArticleInput): F[ApiResult[Article]]
+  def create(input: CreateArticleInput): F[ApiResult[Article]]
+  def update(input: UpdateArticleInput): F[ApiResult[Article]]
+  def delete(input: DeleteArticleInput): F[ApiResult[Unit]]
+  def favorite(input: FavoriteArticleInput): F[ApiResult[Article]]
   def unfavorite(
       input: UnfavoriteArticleInput
-  ): F[ApiResult[UnfavoriteArticleOutput]]
+  ): F[ApiResult[Article]]
 }
 
 object ArticleApis {
@@ -37,7 +37,7 @@ object ArticleApis {
 
     def getAll(
         input: GetAllArticlesInput
-    ): F[ApiResult[GetAllArticlesOutput]] = {
+    ): F[ApiResult[GetArticlesOutput]] = {
       val articles = for {
         articlesWithAuthor <- articleRepo.findArticlesFilteredBy(
           input.filter,
@@ -52,12 +52,12 @@ object ArticleApis {
         extras <- articlesExtras(input.authUser, articlesIds)
       } yield (mkArticles(articlesWithAuthor, followers, extras), articleCounts)
 
-      articles.map(p => Right(GetAllArticlesOutput(p._1, p._2)))
+      articles.map(p => Right(GetArticlesOutput(p._1, p._2)))
     }
 
     def getFeed(
         input: GetArticlesFeedInput
-    ): F[ApiResult[GetArticlesFeedOutput]] = {
+    ): F[ApiResult[GetArticlesOutput]] = {
       val articles = for {
         articlesWithAuthor <- articleRepo.findArticlesByFollower(
           input.authUser,
@@ -72,10 +72,10 @@ object ArticleApis {
         extras <- articlesExtras(Some(input.authUser), articlesIds)
       } yield (mkArticles(articlesWithAuthor, followers, extras), articleCounts)
 
-      articles.map(p => Right(GetArticlesFeedOutput(p._1, p._2)))
+      articles.map(p => Right(GetArticlesOutput(p._1, p._2)))
     }
 
-    def get(input: GetArticleInput): F[ApiResult[GetArticleOutput]] = {
+    def get(input: GetArticleInput): F[ApiResult[Article]] = {
       val article = for {
         (articleWithId, author) <- OptionT(
           articleRepo.findArticleBySlug(input.slug)
@@ -98,11 +98,11 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.map(GetArticleOutput.apply).toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound())
       )
     }
 
-    def create(input: CreateArticleInput): F[ApiResult[CreateArticleOutput]] = {
+    def create(input: CreateArticleInput): F[ApiResult[Article]] = {
       def mkArticleEntity(authorId: Int): E.Article = {
         val now = Instant.now
         E.Article(
@@ -130,10 +130,10 @@ object ArticleApis {
         false
       )
 
-      article.map(a => Right(CreateArticleOutput(a)))
+      article.map(Right(_))
     }
 
-    def update(input: UpdateArticleInput): F[ApiResult[UpdateArticleOutput]] = {
+    def update(input: UpdateArticleInput): F[ApiResult[Article]] = {
       def mkArticleForUpdateEntity(authorId: Int): E.ArticleForUpdate = {
         val now = Instant.now
         E.ArticleForUpdate(
@@ -166,18 +166,18 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.map(UpdateArticleOutput.apply).toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound())
       )
     }
 
-    def delete(input: DeleteArticleInput): F[ApiResult[DeleteArticleOutput]] =
+    def delete(input: DeleteArticleInput): F[ApiResult[Unit]] =
       articleRepo
         .deleteArticleBySlug(input.slug, input.authUser)
-        .map(_.map(_ => DeleteArticleOutput()).toRight(ArticleNotFound()))
+        .map(_.toRight(ArticleNotFound()))
 
     def favorite(
         input: FavoriteArticleInput
-    ): F[ApiResult[FavoriteArticleOutput]] = {
+    ): F[ApiResult[Article]] = {
       val article = for {
         (articleWithId, author) <- OptionT(
           articleRepo.findArticleBySlug(input.slug)
@@ -204,13 +204,13 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.map(FavoriteArticleOutput.apply).toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound())
       )
     }
 
     def unfavorite(
         input: UnfavoriteArticleInput
-    ): F[ApiResult[UnfavoriteArticleOutput]] = {
+    ): F[ApiResult[Article]] = {
       val article = for {
         (articleWithId, author) <- OptionT(
           articleRepo.findArticleBySlug(input.slug)
@@ -235,7 +235,7 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.map(UnfavoriteArticleOutput.apply).toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound())
       )
     }
 

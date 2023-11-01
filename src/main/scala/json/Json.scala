@@ -59,6 +59,7 @@ object JsonObject:
     }
   type Solo[A] = JsonObject[A *: EmptyTuple]
   def getSoloValue[K, V]: Solo[(K, V)] => V = _.pairs.head._2
+  def empty: JsonObject[EmptyTuple] = JsonObject(EmptyTuple)
 
 trait JsonMembersEncoder[A]:
   def encode(a: A): List[(String, Json)]

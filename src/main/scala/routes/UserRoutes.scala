@@ -16,8 +16,8 @@ import json.{JsonObject, given}
 
 object UserRoutes {
   def toOutput[F[_]: Functor]
-      : F[User] => F[JsonCodec.User[JsonCodec.UserOutput]] =
-    _.map(JsonCodec.User.wrapUser compose JsonCodec.UserOutput.fromUser)
+      : F[User] => F[JsonCodec.WrappedUser[JsonCodec.User]] =
+    _.map(JsonCodec.WrappedUser.apply compose JsonCodec.User.fromUser)
 
   def apply[F[_]: Async](users: UserApis[F]): AppRoutes[F] = {
 
@@ -27,7 +27,7 @@ object UserRoutes {
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "users" / "login" as _ =>
         for {
-          body <- rq.req.as[JsonCodec.User[JsonCodec.AuthenticateUser]]
+          body <- rq.req.as[JsonCodec.WrappedUser[JsonCodec.AuthenticateUser]]
           rs <- withValidation(
             validAuthenticateUserBody(
               AuthenticateUserBody.fromCodec(JsonObject.getSoloValue(body))
@@ -42,7 +42,7 @@ object UserRoutes {
 
       case rq @ POST -> Root / "users" as _ =>
         for {
-          body <- rq.req.as[JsonCodec.User[JsonCodec.RegisterUser]]
+          body <- rq.req.as[JsonCodec.WrappedUser[JsonCodec.RegisterUser]]
           rs <- withValidation(
             validRegisterUserBody(
               RegisterUserBody.fromCodec(JsonObject.getSoloValue(body))
@@ -67,7 +67,7 @@ object UserRoutes {
 
       case rq @ PUT -> Root / "user" as authUser => {
         for {
-          body <- rq.req.as[JsonCodec.User[JsonCodec.UpdateUser]]
+          body <- rq.req.as[JsonCodec.WrappedUser[JsonCodec.UpdateUser]]
           rs <- withAuthUser(authUser) { u =>
             withValidation(
               validUpdateUserBody(

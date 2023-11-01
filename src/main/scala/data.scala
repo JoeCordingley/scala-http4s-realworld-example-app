@@ -9,13 +9,15 @@ import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray}
 
 object data {
 
+  case class GetArticlesOutput(articles: List[Article], articlesCount: Int)
+
   type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
 
   object JsonCodec {
-    type User[T] = JsonObject.Solo[("user", T)]
-    object User:
-      def wrapUser[T]: T => User[T] = t => JsonObject(("user", t) *: EmptyTuple)
+    type WrappedUser[T] = JsonObject.Solo[("user", T)]
+    object WrappedUser:
+      def apply[T]: T => WrappedUser[T] = t => JsonObject(("user", t) *: EmptyTuple)
 
     type AuthenticateUser =
       JsonObject[(("email", String), ("password", String))]
@@ -38,9 +40,11 @@ object data {
           Option[("body", Nullable[String])]
       )
     ]
-    type Article[T] = JsonObject.Solo[("article", T)]
+    type WrappedArticle[T] = JsonObject.Solo[("article", T)]
+    object WrappedArticle:
+      def apply[T]: T => WrappedArticle[T] = t => JsonObject(("article", t) *: EmptyTuple)
 
-    type ArticleOutput = JsonObject[(
+    type Article = JsonObject[(
       ("slug", String),
       ("title", String),
       ("description", String),
@@ -52,8 +56,9 @@ object data {
       ("favoritesCount", Int),
       ("author", Profile),
     )]
-    object ArticleOutput:
-      def fromArticle: data.Article => ArticleOutput = {
+
+    object Article:
+      def fromData: data.Article => Article = {
         case data.Article(slug, title, description, body, tagList, createdAt, updatedAt, favorited, favoritesCount, author) => 
           JsonObject(
             ("slug", slug),
@@ -65,7 +70,7 @@ object data {
             ("updatedAt", updatedAt),
             ("favorited", favorited),
             ("favoritesCount", favoritesCount),
-            ("author", Profile.fromProfile(author)),
+            ("author", Profile.fromData(author)),
           )
       }
     type Profile = JsonObject[(
@@ -76,7 +81,7 @@ object data {
     )]
     
     object Profile:
-      def fromProfile: data.Profile => Profile = {
+      def fromData: data.Profile => Profile = {
         case data.Profile(username, maybeBio, maybeImage, following) => 
           JsonObject(
             ("username", username),
@@ -86,7 +91,7 @@ object data {
             )
       }
 
-    type UserOutput = JsonObject[
+    type User = JsonObject[
       (
           ("email", String),
           ("token", String),
@@ -95,8 +100,8 @@ object data {
           ("image", Nullable[String]),
       )
     ]
-    object UserOutput:
-      def fromUser: data.User => UserOutput = {
+    object User:
+      def fromUser: data.User => User = {
         case data.User(email, token, username, bio, image) =>
           JsonObject(
             (
@@ -108,6 +113,21 @@ object data {
             )
           )
       }
+    type GetArticlesOutput = JsonObject[(("articles", JsonArray[Article]), ("articlesCount", Int))]
+    object GetArticlesOutput:
+      def fromData: data.GetArticlesOutput => GetArticlesOutput = {
+        case data.GetArticlesOutput(articles, articlesCount) => JsonObject(
+          ("articles", JsonArray(articles.map(Article.fromData))),
+          ("articlesCount", articlesCount)
+        )
+      }
+    type CreateArticle = JsonObject[(
+      ("title", String),
+      ("description", String),
+      ("body", String),
+      Option[("tagList", Nullable[JsonArray[String]])],
+    )]
+    
   }
 
   object RequestBodies {
@@ -160,7 +180,16 @@ object data {
         description: String,
         body: String,
         tagList: Option[List[String]]
-    ) derives Decoder
+    ) 
+    object CreateArticleBody:
+      def fromCodec: JsonCodec.CreateArticle => CreateArticleBody = {
+        case JsonObject(
+          ("title", title),
+          ("description", description),
+          ("body", body),
+          maybeTagList
+        ) => CreateArticleBody(title, description, body, oNValue["tagList"](maybeTagList).map(_.elements))
+      }
     case class UpdateArticleBody(
         title: Option[String],
         description: Option[String],
@@ -253,22 +282,20 @@ object data {
     case class GetProfileOutput(profile: Profile)
     case class FollowUserOutput(profile: Profile)
     case class UnfollowUserOutput(profile: Profile)
-    case class GetAllArticlesOutput(articles: List[Article], articlesCount: Int)
-    object GetAllArticlesOutput:
-      given Encoder[GetAllArticlesOutput] = deriveEncoder
     case class GetArticlesFeedOutput(
         articles: List[Article],
         articlesCount: Int
     )
-    object GetArticlesFeedOutput:
-      given Encoder[GetArticlesFeedOutput] = deriveEncoder
-    case class GetArticleOutput(article: Article) derives Encoder.AsObject
-    case class CreateArticleOutput(article: Article) derives Encoder.AsObject
-    case class UpdateArticleOutput(article: Article) derives Encoder.AsObject
-    case class DeleteArticleOutput() derives Encoder.AsObject
-    case class FavoriteArticleOutput(article: Article) derives Encoder.AsObject
+    case class GetAllArticlesOutput(
+        articles: List[Article],
+        articlesCount: Int
+    )
+    case class GetArticleOutput(article: Article)
+    case class CreateArticleOutput(article: Article)
+    case class UpdateArticleOutput(article: Article)
+    case class DeleteArticleOutput()
+    case class FavoriteArticleOutput(article: Article) 
     case class UnfavoriteArticleOutput(article: Article)
-        derives Encoder.AsObject
     case class AddCommentOutput(comment: Comment)
     case class GetCommentsOutput(comments: List[Comment])
     // TODO return {} instead of null
