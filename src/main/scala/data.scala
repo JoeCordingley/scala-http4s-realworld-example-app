@@ -10,6 +10,7 @@ import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray}
 object data {
 
   case class GetArticlesOutput(articles: List[Article], articlesCount: Int)
+  case class GetCommentsOutput(comments: List[Comment])
 
   type ApiResult[R] = Either[ApiError, R]
   type AuthUser = Int
@@ -149,7 +150,51 @@ object data {
       )
     ]
     type WrappedComment[T] = JsonObject.Solo[("comment", T)]
+    object WrappedComment:
+      def apply[T]: T => WrappedComment[T] = t =>
+        JsonObject(("comment", t) *: EmptyTuple)
     type Body = JsonObject.Solo[("body", String)]
+    type Comment = JsonObject[
+      (
+          ("id", Int),
+          ("createdAt", Instant),
+          ("updatedAt", Instant),
+          ("body", String),
+          ("author", Profile)
+      )
+    ]
+    object Comment:
+      def fromData: data.Comment => Comment = {
+        case data.Comment(id, createdAt, updatedAt, body, author) =>
+          JsonObject(
+            ("id", id),
+            ("createdAt", createdAt),
+            ("updatedAt", updatedAt),
+            ("body", body),
+            ("author", Profile.fromData(author))
+          )
+      }
+    type Comments = JsonObject.Solo[("comments", JsonArray[Comment])]
+    object Comments:
+      def fromData: data.GetCommentsOutput => Comments = {
+        case data.GetCommentsOutput(comments) =>
+          JsonObject(
+            (
+              "comments",
+              JsonArray(comments.map(Comment.fromData))
+            ) *: EmptyTuple
+          )
+      }
+    type WrappedProfile = JsonObject.Solo[("profile", Profile)]
+    object WrappedProfile:
+      def fromData: data.Profile => WrappedProfile = p =>
+        JsonObject(("profile", Profile.fromData(p)) *: EmptyTuple)
+
+    type Tags = JsonObject.Solo[("tags", JsonArray[String])]
+    object Tags:
+      def fromData: List[String] => Tags = tags =>
+        JsonObject(("tags", JsonArray(tags)) *: EmptyTuple)
+
   }
 
   object RequestBodies {
@@ -181,7 +226,7 @@ object data {
         password: Option[String],
         bio: Option[String],
         image: Option[String]
-    ) derives Decoder
+    )
 
     object UpdateUserBody:
       def fromCodec: JsonCodec.UpdateUser => UpdateUserBody = {
@@ -196,7 +241,7 @@ object data {
             image = oNValue["image"](maybeImage)
           )
       }
-    case class WrappedArticleBody[T](article: T) derives Decoder
+    case class WrappedArticleBody[T](article: T)
     case class CreateArticleBody(
         title: String,
         description: String,
@@ -325,9 +370,7 @@ object data {
     case class FavoriteArticleOutput(article: Article)
     case class UnfavoriteArticleOutput(article: Article)
     case class AddCommentOutput(comment: Comment)
-    case class GetCommentsOutput(comments: List[Comment])
     // TODO return {} instead of null
-    case class DeleteCommentOutput()
     case class GetTagsOutput(tags: List[String])
   }
 
@@ -421,7 +464,7 @@ object data {
       bio: Option[String],
       image: Option[String],
       following: Boolean
-  ) derives Encoder.AsObject
+  )
   case class Article(
       slug: String,
       title: String,
@@ -433,7 +476,7 @@ object data {
       favorited: Boolean,
       favoritesCount: Int,
       author: Profile
-  ) derives Encoder.AsObject
+  )
   case class Comment(
       id: Int,
       createdAt: Instant,

@@ -13,9 +13,9 @@ import io.rw.app.security.{JwtToken, PasswordHasher}
 import io.rw.app.data
 
 trait ProfileApis[F[_]] {
-  def get(input: GetProfileInput): F[ApiResult[GetProfileOutput]]
-  def follow(input: FollowUserInput): F[ApiResult[FollowUserOutput]]
-  def unfollow(input: UnfollowUserInput): F[ApiResult[UnfollowUserOutput]]
+  def get(input: GetProfileInput): F[ApiResult[Profile]]
+  def follow(input: FollowUserInput): F[ApiResult[Profile]]
+  def unfollow(input: UnfollowUserInput): F[ApiResult[Profile]]
 }
 
 object ProfileApis {
@@ -23,7 +23,7 @@ object ProfileApis {
   def impl[F[_]: Monad](userRepo: UserRepo[F], followerRepo: FollowerRepo[F]) =
     new ProfileApis[F]() {
 
-      def get(input: GetProfileInput): F[ApiResult[GetProfileOutput]] = {
+      def get(input: GetProfileInput): F[ApiResult[Profile]] = {
         val profile = for {
           userWithId <- OptionT(userRepo.findUserByUsername(input.username))
           following <- OptionT.liftF(
@@ -34,11 +34,11 @@ object ProfileApis {
         } yield mkProfile(userWithId.entity, following)
 
         profile.value.map(
-          _.map(GetProfileOutput.apply).toRight(ProfileNotFound())
+          _.toRight(ProfileNotFound())
         )
       }
 
-      def follow(input: FollowUserInput): F[ApiResult[FollowUserOutput]] = {
+      def follow(input: FollowUserInput): F[ApiResult[Profile]] = {
         val profile = for {
           userWithId <- EitherT.fromOptionF(
             userRepo.findUserByUsername(input.username),
@@ -56,13 +56,12 @@ object ProfileApis {
           )
         } yield mkProfile(userWithId.entity, true)
 
-        profile.value.map(_.recover({ case UserFollowingHimself(p) => p }
-        ).map(FollowUserOutput(_)))
+        profile.value.map(_.recover({ case UserFollowingHimself(p) => p }))
       }
 
       def unfollow(
           input: UnfollowUserInput
-      ): F[ApiResult[UnfollowUserOutput]] = {
+      ): F[ApiResult[Profile]] = {
         val profile = for {
           userWithId <- EitherT.fromOptionF(
             userRepo.findUserByUsername(input.username),
@@ -78,8 +77,7 @@ object ProfileApis {
           )
         } yield mkProfile(userWithId.entity, false)
 
-        profile.value.map(_.recover({ case UserUnfollowingHimself(p) => p }
-        ).map(UnfollowUserOutput(_)))
+        profile.value.map(_.recover({ case UserUnfollowingHimself(p) => p }))
       }
     }
 }

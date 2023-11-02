@@ -12,9 +12,9 @@ import io.rw.app.utils.*
 import java.time.Instant
 
 trait CommentApis[F[_]] {
-  def add(input: AddCommentInput): F[ApiResult[AddCommentOutput]]
+  def add(input: AddCommentInput): F[ApiResult[Comment]]
   def get(input: GetCommentsInput): F[ApiResult[GetCommentsOutput]]
-  def delete(input: DeleteCommentInput): F[ApiResult[DeleteCommentOutput]]
+  def delete(input: DeleteCommentInput): F[ApiResult[Unit]]
 }
 
 object CommentApis {
@@ -25,7 +25,7 @@ object CommentApis {
       followerRepo: FollowerRepo[F]
   ) = new CommentApis[F] {
 
-    def add(input: AddCommentInput): F[ApiResult[AddCommentOutput]] = {
+    def add(input: AddCommentInput): F[ApiResult[Comment]] = {
       def mkCommentEntity(articleId: Int): E.Comment = {
         val now = Instant.now
         E.Comment(input.body, articleId, input.authUser, now, now)
@@ -46,7 +46,6 @@ object CommentApis {
       } yield mkComment(commentWithId, commentAuthor.entity, following)
 
       comment.value
-        .map(_.map(AddCommentOutput.apply))
         .map(_.toRight(ArticleNotFound()))
     }
 
@@ -69,7 +68,7 @@ object CommentApis {
         .map(_.toRight(ArticleNotFound()))
     }
 
-    def delete(input: DeleteCommentInput): F[ApiResult[DeleteCommentOutput]] = {
+    def delete(input: DeleteCommentInput): F[ApiResult[Unit]] = {
       val deleted = for {
         (articleWithId, _) <- OptionT(articleRepo.findArticleBySlug(input.slug))
         _ <- OptionT(
@@ -82,7 +81,6 @@ object CommentApis {
       } yield ()
 
       deleted.value
-        .map(_.map(_ => DeleteCommentOutput()))
         .map(_.toRight(CommentNotFound()))
     }
   }
