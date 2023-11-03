@@ -6,42 +6,34 @@ import org.scalacheck.Prop.forAll
 import scala.language.adhocExtensions
 
 object JsonSchemaPropertyTests extends Properties("JsonSchema") {
+  sealed trait DependentlyTyped:
+    type T
+    val value: T
 
-//  sealed trait JsonType:
-//    type T
-//
-     
-//    type Aux[A] = JsonType{type T = A}
-//    case object JsonStringT extends JsonType{type T = String}
-//    case class JsonArrayT[A](t: Aux[A]) extends JsonType{type T = JsonArray[A]}
-//    def gen: Gen[JsonType] = Gen.oneOf(Gen.const(JsonType.JsonStringT), Gen.lzy(gen.map(t => JsonArrayT(t))))
-//    def length: JsonType => Int = {
-//      case JsonStringT => 1
-//      case JsonArrayT(l) => length(l) + 1
-//    }
-//    given Arbitrary[JsonType] = Arbitrary(gen)
+  object DependentlyTyped:
+    def enclose[A](a: A): DependentlyTyped = new DependentlyTyped{
+      type T = A
+      val value: T = a
+    }
 
-  
 
   sealed trait UntypedJson:
     type T
     val typed: JsonType[T]
 
-  object UntypedJson:
-    def fromTyped[A](t: JsonType[A]): UntypedJson = new UntypedJson{
-      type T = A
-      val typed: JsonType[T] = t
-    }
-
   object JsonType:
     def gen: Gen[UntypedJson] = Gen.oneOf(
-      Gen.const(JsonType.StringType).map(UntypedJson.fromTyped), 
-      Gen.lzy(gen).map(_.typed).map(ArrayType(_)).map(UntypedJson.fromTyped)
+      Gen.const(StringType),
+      Gen.lzy(gen).map(_.typed).map(ArrayType(_))
     )
-    
-  enum JsonType[A]:
-    case StringType extends JsonType[String]
-    case ArrayType[A](t: JsonType[A]) extends JsonType[JsonArray[A]]
+    case object StringType extends JsonType[String]
+    case class ArrayType[A](t: JsonType[A]) extends JsonType[JsonArray[A]]
+
+  sealed trait JsonType[A] extends UntypedJson{
+    type T = A
+    val typed: JsonType[T] = this
+  }
+
 
   def genJson[A](jsonType: JsonType[A]): Gen[A] = jsonType match {
     case JsonType.StringType => arbitrary[String]
@@ -60,9 +52,6 @@ object JsonSchemaPropertyTests extends Properties("JsonSchema") {
     (a+b+c).substring(a.length, a.length+b.length) == b
   }
 
-//  property("not massive") = forAll { (a: JsonType) =>
-//    JsonType.length(a) <= 10
-//  }
 
 }
 
