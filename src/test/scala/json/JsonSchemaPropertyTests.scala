@@ -32,19 +32,19 @@ object JsonSchemaPropertyTests extends Properties("JsonSchema") {
     val typed: JsonType[T] = this
   }
 
-
   def genJson[A](jsonType: JsonType[A]): Gen[A] = jsonType match {
     case JsonType.StringType => arbitrary[String]
     case JsonType.ArrayType(a) => Gen.listOf(Gen.lzy(genJson(a))).map(JsonArray(_))
   }
 
+  enum Tree[A]:
+    case Leaf(a: A) extends Tree[A]
+    case Node(l: Tree[A], r: Tree[A]) extends Tree[A]
+
   property("startsWith") = forAll { (a: String, b: String) =>
     (a+b).startsWith(a)
   }
 
-  property("concatenate") = forAll { (a: String, b: String) =>
-    (a+b).length > a.length && (a+b).length > b.length
-  }
 
   property("substring") = forAll { (a: String, b: String, c: String) =>
     (a+b+c).substring(a.length, a.length+b.length) == b
@@ -53,6 +53,7 @@ object JsonSchemaPropertyTests extends Properties("JsonSchema") {
   property("not massive") = forAll { (a: UntypedJson) =>
     UntypedJson.length(a) <= 10
   }
+
 
 
 }

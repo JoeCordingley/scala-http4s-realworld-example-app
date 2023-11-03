@@ -5,6 +5,11 @@ import io.circe.{Decoder, Encoder, Codec, Json}
 import io.circe
 import scala.annotation.targetName
 
+case class Fix[F[_]](unfix: F[Fix[F]])
+object Fix:
+  given [F[_]](using e: => Encoder[F[Fix[F]]]): Encoder[Fix[F]] = e.contramap(_.unfix)
+  given [F[_]](using d: => Decoder[F[Fix[F]]]): Decoder[Fix[F]] = d.map(Fix(_))
+
 case object JsonNull:
   given Encoder[JsonNull] = _ => Json.Null
   given Decoder[JsonNull] = Decoder[Json].emap {
