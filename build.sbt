@@ -35,6 +35,7 @@ lazy val root = (project in file("."))
       "ch.qos.logback" % "logback-classic" % logbackVersion,
       "com.lihaoyi" %% "utest" % uTestVersion % Test,
       "com.opentable.components" % "otj-pg-embedded" % pgEmbededVersion % Test,
+      "org.scalacheck" %% "scalacheck" % "1.17.0" % Test,
       "org.flywaydb" % "flyway-core" % flywayVersion % Test
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
