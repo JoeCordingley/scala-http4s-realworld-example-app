@@ -6,26 +6,24 @@ import org.scalacheck.Prop.forAll
 import scala.language.adhocExtensions
 
 object JsonSchemaPropertyTests extends Properties("JsonSchema") {
-  sealed trait DependentlyTyped:
-    type T
-    val value: T
-
-  object DependentlyTyped:
-    def enclose[A](a: A): DependentlyTyped = new DependentlyTyped{
-      type T = A
-      val value: T = a
-    }
-
 
   sealed trait UntypedJson:
     type T
     val typed: JsonType[T]
 
-  object JsonType:
+  object UntypedJson:
     def gen: Gen[UntypedJson] = Gen.oneOf(
-      Gen.const(StringType),
-      Gen.lzy(gen).map(_.typed).map(ArrayType(_))
+      Gen.const(JsonType.StringType),
+      Gen.lzy(gen).map(_.typed).map(JsonType.ArrayType(_))
     )
+    def length: UntypedJson => Int = _.typed match {
+      case JsonType.StringType => 1
+      case JsonType.ArrayType(l) => length(l) + 1
+    }
+    given Arbitrary[UntypedJson] = Arbitrary(gen)
+    
+
+  object JsonType:
     case object StringType extends JsonType[String]
     case class ArrayType[A](t: JsonType[A]) extends JsonType[JsonArray[A]]
 
@@ -50,6 +48,10 @@ object JsonSchemaPropertyTests extends Properties("JsonSchema") {
 
   property("substring") = forAll { (a: String, b: String, c: String) =>
     (a+b+c).substring(a.length, a.length+b.length) == b
+  }
+
+  property("not massive") = forAll { (a: UntypedJson) =>
+    UntypedJson.length(a) <= 10
   }
 
 
