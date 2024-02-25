@@ -1,6 +1,7 @@
 package json
 
 import org.http4s.Uri
+import io.circe.Encoder
 
 //case class JsonSchema[A](`$schema`: Option[Uri] = None, `$id`: Option[Uri] = None, title: Option[String] = None, description: Option[String] = None, schemaType: SchemaType[A])
 
@@ -40,6 +41,7 @@ val y: JsonSchema[JsonArray[JsonObject[(("id", String), ("name", String))]]] =
       (("id", String), ("name", String))
     ](("id", JsonSchema.String), ("name", JsonSchema.String))
   )
+
 val x: JsonSchema[JsonArray[JsonObject[(("id", String), ("name", String))]]] =
   JsonSchema.Array(
     JsonSchema.Object(
@@ -49,3 +51,27 @@ val x: JsonSchema[JsonArray[JsonObject[(("id", String), ("name", String))]]] =
       )
     )
   )
+
+type JsonType = "string" /: "object" /: "array" /: "null" /: "number"
+type SchemaType = Either[JsonType, JsonArray[JsonType]]
+object SchemaType:
+  def single(jsontype: JsonType): SchemaType = Left(jsontype)
+  def multiple(jsontypes: JsonType*): SchemaType = Right(JsonArray(jsontypes.toList))
+
+object JsonType:
+  val String: JsonType = Left("string")
+  val Object: JsonType = Right(Left("object"))
+  val Array: JsonType = Right(Right(Left("array")))
+  val Null: JsonType = Right(Right(Right(Left("null"))))
+  val Number: JsonType = Right(Right(Right(Right("number"))))
+
+type EndSchema = JsonObject.Solo[(
+  ("type", SchemaType)
+)]
+
+object EndSchema:
+  given Conversion[JsonSchema[String], EndSchema] = _ => JsonObject((("type", SchemaType.single(JsonType.String)) *: EmptyTuple))
+  
+
+val z = summon[Encoder[EndSchema]]
+
