@@ -43,6 +43,7 @@ object JsonArray {
 trait JsonFieldEncoder[A]:
   def encode: String
   def decode: A
+
 object JsonFieldEncoder:
   given [A <: String: ValueOf]: JsonFieldEncoder[A] with
     def encode: String = summon[ValueOf[A]].value

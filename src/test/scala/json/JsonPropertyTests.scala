@@ -4,6 +4,7 @@ import org.scalacheck.{Properties, Gen, Arbitrary}
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Prop.forAll
 import scala.language.adhocExtensions
+import io.circe.Encoder
 
 object JsonPropertyTests extends Properties("JsonSchema") {
 
@@ -37,7 +38,18 @@ object JsonPropertyTests extends Properties("JsonSchema") {
   }
 
   property("trees not so big") = forAll { (a: Tree[Unit]) =>
+    println(Encoder[Name].apply(Name("Joe")).noSpaces)
     Tree.size(a) <= 100
+  }
+
+  opaque type Name = String
+
+  object Name {
+    def encoder: Encoder[Name] = Encoder[String]
+    given Encoder[Name] = encoder
+    def apply(s: String): Name = s
+    extension(n: Name)
+      def value: String = n
   }
 
 }
