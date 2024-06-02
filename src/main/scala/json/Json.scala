@@ -24,12 +24,12 @@ case class JsonArray[A](elements: List[A])
 case class JsonMember[A](value: A)
 object JsonMember:
   given nonOpt[K, V: Decoder](using
-      f: JsonFieldEncoder[K]
+      f: JsonFieldCodec[K]
   ): Decoder[JsonMember[(K, V)]] =
     Decoder[V].at(f.encode).map(v => JsonMember(f.decode -> v))
 
   given opt[K, V: Decoder](using
-      f: JsonFieldEncoder[K]
+      f: JsonFieldCodec[K]
   ): Decoder[JsonMember[Option[(K, V)]]] = _.downField(f.encode).success
     .traverse(_.as[V].map(f.decode -> _))
     .map(JsonMember(_))
@@ -40,12 +40,12 @@ object JsonArray {
   given [A: Decoder]: Decoder[JsonArray[A]] = Decoder[List[A]].map(JsonArray(_))
 }
 
-trait JsonFieldEncoder[A]:
+trait JsonFieldCodec[A]:
   def encode: String
   def decode: A
 
-object JsonFieldEncoder:
-  given [A <: String: ValueOf]: JsonFieldEncoder[A] with
+object JsonFieldCodec:
+  given [A <: String: ValueOf]: JsonFieldCodec[A] with
     def encode: String = summon[ValueOf[A]].value
     def decode: A = summon[ValueOf[A]].value
 
@@ -72,9 +72,9 @@ trait JsonMembersEncoder[A]:
 
 object JsonMembersEncoder:
   given JsonMembersEncoder[EmptyTuple] = _ => List.empty
-  given [K: JsonFieldEncoder, V: Encoder, T <: Tuple: JsonMembersEncoder]
+  given [K: JsonFieldCodec, V: Encoder, T <: Tuple: JsonMembersEncoder]
       : JsonMembersEncoder[(K, V) *: T] = { case (key, value) *: tail =>
-    (summon[JsonFieldEncoder[K]].encode, Encoder[V].apply(value)) :: summon[
+    (summon[JsonFieldCodec[K]].encode, Encoder[V].apply(value)) :: summon[
       JsonMembersEncoder[T]
     ].encode(tail)
   }
