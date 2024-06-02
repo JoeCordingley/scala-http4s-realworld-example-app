@@ -6,31 +6,49 @@ import cats.syntax.option
 enum SchemaType:
   case String
   case Object
-  case Int
+  case Integer
   case Boolean
   case Null
   case Array
+  case Number
 
-type JsonSchemaCodec = Fix[JsonSchemaUnfixed]
+type JsonSchemaCodec = json.Fix[JsonSchemaUnfixed]
+object JsonSchemaCodec:
+  def apply(
+      `type`: Option[SchemaType] = None,
+      properties: Option[Map[String, JsonSchemaCodec]] = None,
+      required: Option[List[String]] = None,
+      items: Option[JsonSchemaCodec] = None,
+      additionalProperties: Option[JsonSchemaCodec] = None
+  ): JsonSchemaCodec = Fix(
+    JsonObject(
+      (
+        `type`.map("type" -> _),
+        properties
+          .map(values => "properties" -> JsonObject(values)),
+        required.map(values => "required" -> JsonArray(values)),
+        items.map("items" -> _),
+        additionalProperties.map(
+          "additionalProperties" -> _
+        ),
+      )
+    )
+  )
 
 type JsonSchemaUnfixed[A] = JsonObject[
   (
       Option[("type", SchemaType)],
       Option[("properties", JsonObject[Map[String, A]])],
       Option[("required", JsonArray[String])],
+      Option[("items", A)],
       Option[("additionalProperties", A)]
   )
 ]
 
-case class JsonSchema(`type`: Option[SchemaType], properties: Option[Map[String, JsonSchema]], required: Option[JsonArray[String]], additionalProperties: Option[JsonSchema])
-object JsonSchema:
-  def toCodec: JsonSchema => JsonSchemaCodec = {
-    case JsonSchema(t, properties, required, additionalProperties) => Fix(JsonObject(t.map(s => ("type", s)),properties.map(p => ("properties", p.mapValues(toCodec(_)).toMap)), required.map(r => ("required",r)), additionalProperties.map(a => ("additionalProperties", toCodec(a)))))
-  }
-
 enum TypesafeSchema[A]:
   case String extends TypesafeSchema[java.lang.String]
   case Int extends TypesafeSchema[Int]
+  case Double extends TypesafeSchema[Double]
   case Boolean extends TypesafeSchema[Boolean]
   case Null extends TypesafeSchema[JsonNull]
   case Array[A](schema: TypesafeSchema[A]) extends TypesafeSchema[JsonArray[A]]
@@ -39,29 +57,76 @@ enum TypesafeSchema[A]:
   case Fix[F[_]](unfix: TypesafeSchema[F[json.Fix[F]]])
       extends TypesafeSchema[json.Fix[F]]
 
-object TypesafeSchema:
-  def toJsonSchema[A]: TypesafeSchema[A] => JsonSchema = {
-    case TypesafeSchema.String => JsonSchema(Some(SchemaType.String), None, None, None)
-    case TypesafeSchema.Int => JsonSchema(Some(SchemaType.Int), None, None, None)
-    case TypesafeSchema.Boolean => JsonSchema(Some(SchemaType.Boolean), None, None, None)
-    case TypesafeSchema.Null => JsonSchema(None, None, None, None)
-    case TypesafeSchema.Array(_) => JsonSchema(Some(SchemaType.Array), None, None, None)
-    case TypesafeSchema.Object(_) => JsonSchema(Some(SchemaType.Object), None, None, None)
-    case TypesafeSchema.Fix(_) => JsonSchema(Some(SchemaType.Object), None, None, None)
-  }
+trait ToJsonCodec[A]:
+  def apply(a: A): JsonSchemaCodec
 
+object ToJsonCodec:
+  given string: ToJsonCodec[TypesafeSchema[String]] =
+    case TypesafeSchema.String =>
+      JsonSchemaCodec(`type` = Some(SchemaType.String))
+  given int: ToJsonCodec[TypesafeSchema[Int]] =
+    case TypesafeSchema.Int =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Integer))
+  given bool: ToJsonCodec[TypesafeSchema[Boolean]] =
+    case TypesafeSchema.Boolean =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Boolean))
+  given `null`: ToJsonCodec[TypesafeSchema[JsonNull]] =
+    case TypesafeSchema.Null =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Null))
+  given double: ToJsonCodec[TypesafeSchema[Double]] =
+    case TypesafeSchema.Double =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Number))
+  given arr[A](using
+      c: ToJsonCodec[TypesafeSchema[A]]
+  ): ToJsonCodec[TypesafeSchema[JsonArray[A]]] =
+    case TypesafeSchema.Array(schema) =>
+      JsonSchemaCodec(
+        `type` = Some(SchemaType.Array),
+        items = Some(c.apply(schema))
+      )
+
+object TypesafeSchema:
+
+  def toCodec[A]: TypesafeSchema[A] => JsonSchemaCodec = {
+    case TypesafeSchema.String =>
+      JsonSchemaCodec(`type` = Some(SchemaType.String))
+    case TypesafeSchema.Int =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Integer))
+    case TypesafeSchema.Boolean =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Boolean))
+    case TypesafeSchema.Null =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Null))
+    case TypesafeSchema.Double =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Number))
+    case TypesafeSchema.Array(schema) =>
+      JsonSchemaCodec(
+        `type` = Some(SchemaType.Array),
+        items = Some(toCodec(schema))
+      )
+    case TypesafeSchema.Object(properties) =>
+      JsonSchemaCodec(`type` = Some(SchemaType.Object))
+    case TypesafeSchema.Fix(_) => JsonSchemaCodec()
+  }
 
 enum JsonProperties[A]:
   case Empty extends JsonProperties[EmptyTuple]
   case Required[A, B, C <: Tuple](
       head: (A, TypesafeSchema[B]),
-      tail: JsonProperties[C],
+      tail: JsonProperties[C]
   ) extends JsonProperties[(A, B) *: C]
   case Optional[A, B, C <: Tuple](
       head: (A, TypesafeSchema[B]),
-      tail: JsonProperties[C],
+      tail: JsonProperties[C]
   ) extends JsonProperties[Option[(A, B)] *: C]
-  case Map[A, B](schema: TypesafeSchema[B]) extends JsonProperties[scala.collection.Map[A, B]]
+  case Map[A, B](schema: TypesafeSchema[B])
+      extends JsonProperties[scala.collection.Map[A, B]]
+
+//object JsonProperties:
+//  def toMap[A: ToPropertyMap](
+//      properties: JsonProperties[A]
+//  ): Map[String, JsonSchemaCodec]
+
+trait ToPropertyMap[A]
 
 trait DefaultSchema[A]:
   def apply: TypesafeSchema[A]
@@ -92,7 +157,7 @@ object DefaultProperties:
       : DefaultProperties[(A, B) *: C] with
     def apply: JsonProperties[(A, B) *: C] = JsonProperties.Required(
       (summon[ValueOf[A]].value, summon[DefaultSchema[B]].apply),
-      summon[DefaultProperties[C]].apply,
+      summon[DefaultProperties[C]].apply
     )
   given opt[A: ValueOf, B: DefaultSchema, C <: Tuple: DefaultProperties]
       : DefaultProperties[Option[(A, B)] *: C] with
@@ -100,41 +165,7 @@ object DefaultProperties:
       (summon[ValueOf[A]].value, summon[DefaultSchema[B]].apply),
       summon[DefaultProperties[C]].apply
     )
-  given [A, B: DefaultSchema]: DefaultProperties[scala.collection.Map[A, B]] with
-    def apply: JsonProperties[scala.collection.Map[A, B]] = JsonProperties.Map[A, B](summon[DefaultSchema[B]].apply)
-
-//val x: TypesafeSchema[JsonArray[JsonObject[(("id", String), ("name", String))]]] =
-//  TypesafeSchema.Array(
-//    TypesafeSchema.Object(
-//      JsonProperties.Required(
-//        ("id", TypesafeSchema.String),
-//        JsonProperties.Required(("name", TypesafeSchema.String), JsonProperties.Empty)
-//      )
-//    )
-//  )
-
-//val y: JsonProperties[(("id", String), ("name", String))] =
-//    ToProperties.toProperties((("id": "id"), TypesafeSchema.String), (("name": "name"), TypesafeSchema.String))
-
-//object TypesafeSchema:
-//  def obj[A, B](a: A)(using t: ToProperties[A, B]): TypesafeSchema[JsonObject[B]] =
-//    Object(t.apply(a))
-
-//trait ToProperties[A, B]:
-//  def apply(properties: A): JsonProperties[B]
-//
-//object ToProperties:
-//  given ToProperties[EmptyTuple, EmptyTuple] = _ => JsonProperties.Empty
-//  given [A, B, S <: Tuple, T <: Tuple](using
-//      t: ToProperties[S, T]
-//  ): ToProperties[(A, TypesafeSchema[B]) *: S, (A, B) *: T] = { case pair *: s =>
-//    JsonProperties.Required(pair, t.apply(s))
-//  }
-//  def toProperties[A, B](a: A)(using t: ToProperties[A, B]): JsonProperties[B] =
-//    t.apply(a)
-//
-//extension [A, B](t: (A, TypesafeSchema[B]))
-//  def **:[C <: Tuple](c: JsonProperties[C]): JsonProperties[(A, B) *: C] =
-//    JsonProperties.Required(t, c)
-//
-//case class TypesafeSchema[A](`$schema`: Option[Uri] = None, `$id`: Option[Uri] = None, title: Option[String] = None, description: Option[String] = None, schemaType: SchemaType[A])
+  given [A, B: DefaultSchema]: DefaultProperties[scala.collection.Map[A, B]]
+  with
+    def apply: JsonProperties[scala.collection.Map[A, B]] =
+      JsonProperties.Map[A, B](summon[DefaultSchema[B]].apply)
