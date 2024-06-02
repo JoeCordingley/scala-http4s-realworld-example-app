@@ -70,7 +70,14 @@ type EndSchema = JsonObject.Solo[(
 )]
 
 object EndSchema:
-  given Conversion[JsonSchema[String], EndSchema] = _ => JsonObject((("type", SchemaType.single(JsonType.String)) *: EmptyTuple))
+  def single(jsonType: JsonType): EndSchema = JsonObject((("type", SchemaType.single(jsonType)) *: EmptyTuple))
+
+  given stringConversion: Conversion[JsonSchema[String], EndSchema] = _ => single(JsonType.String)
+  given intConversion: Conversion[JsonSchema[Int], EndSchema] = _ => single(JsonType.Number)
+  given doubleConversion: Conversion[JsonSchema[Double], EndSchema] = _ => single(JsonType.Number)
+  given nullConversion: Conversion[JsonSchema[Null], EndSchema] = _ => single(JsonType.Null)
+  given objectConversion: Conversion[JsonSchema[Null], EndSchema] = _ => single(JsonType.Object)
+  given arrayConversion: Conversion[JsonSchema[Null], EndSchema] = _ => single(JsonType.Array)
   
 
 val z = summon[Encoder[EndSchema]]
