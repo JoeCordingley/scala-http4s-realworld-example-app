@@ -18,8 +18,7 @@ object data {
   object JsonCodec {
     type WrappedUser[T] = JsonObject.Solo[("user", T)]
     object WrappedUser:
-      def apply[T]: T => WrappedUser[T] = t =>
-        JsonObject(("user", t) *: EmptyTuple)
+      def apply[T]: T => WrappedUser[T] = t => JsonObject.Solo(("user", t))
 
     type AuthenticateUser =
       JsonObject[(("email", String), ("password", String))]
@@ -45,7 +44,7 @@ object data {
     type WrappedArticle[T] = JsonObject.Solo[("article", T)]
     object WrappedArticle:
       def apply[T]: T => WrappedArticle[T] = t =>
-        JsonObject(("article", t) *: EmptyTuple)
+        JsonObject.Solo(("article", t))
 
     type Article = JsonObject[
       (
@@ -152,7 +151,7 @@ object data {
     type WrappedComment[T] = JsonObject.Solo[("comment", T)]
     object WrappedComment:
       def apply[T]: T => WrappedComment[T] = t =>
-        JsonObject(("comment", t) *: EmptyTuple)
+        JsonObject.Solo(("comment", t))
     type Body = JsonObject.Solo[("body", String)]
     type Comment = JsonObject[
       (
@@ -178,22 +177,19 @@ object data {
     object Comments:
       def fromData: data.GetCommentsOutput => Comments = {
         case data.GetCommentsOutput(comments) =>
-          JsonObject(
-            (
-              "comments",
-              JsonArray(comments.map(Comment.fromData))
-            ) *: EmptyTuple
+          JsonObject.Solo(
+            ("comments", JsonArray(comments.map(Comment.fromData)))
           )
       }
     type WrappedProfile = JsonObject.Solo[("profile", Profile)]
     object WrappedProfile:
       def fromData: data.Profile => WrappedProfile = p =>
-        JsonObject(("profile", Profile.fromData(p)) *: EmptyTuple)
+        JsonObject.Solo(("profile", Profile.fromData(p)))
 
     type Tags = JsonObject.Solo[("tags", JsonArray[String])]
     object Tags:
       def fromData: List[String] => Tags = tags =>
-        JsonObject(("tags", JsonArray(tags)) *: EmptyTuple)
+        JsonObject.Solo(("tags", JsonArray(tags)))
 
   }
 

@@ -1,84 +1,103 @@
 package json
 
 import org.http4s.Uri
-import io.circe.Encoder
+import cats.syntax.option
 
-//case class JsonSchema[A](`$schema`: Option[Uri] = None, `$id`: Option[Uri] = None, title: Option[String] = None, description: Option[String] = None, schemaType: SchemaType[A])
+enum SchemaType:
+  case String
+  case Object
+  case Integer
+  case Boolean
+  case Null
+  case Array
+  case Number
 
-enum JsonSchema[A]:
-  case String extends JsonSchema[java.lang.String]
-  case Int extends JsonSchema[Integer]
-  case Array[A](schema: JsonSchema[A]) extends JsonSchema[JsonArray[A]]
-  case Object[A](properties: JsonProperties[A])
-      extends JsonSchema[JsonObject[A]]
-object JsonSchema:
-  def obj[A, B](a: A)(using t: ToProperties[A, B]): JsonSchema[JsonObject[B]] =
-    Object(t.apply(a))
-
-trait ToProperties[A, B]:
-  def apply(properties: A): JsonProperties[B]
-
-object ToProperties:
-  given ToProperties[EmptyTuple, EmptyTuple] = _ => JsonProperties.Empty
-  given [A, B, S <: Tuple, T <: Tuple](
-    using t: ToProperties[S, T]
-  ): ToProperties[(A, JsonSchema[B]) *: S, (A, B) *: T] = { case pair *: s =>
-    JsonProperties.Cons(pair, t.apply(s))
-  }
-
-enum JsonProperties[A]:
-  case Empty extends JsonProperties[EmptyTuple]
-  case Cons[A, B, C <: Tuple](head: (A, JsonSchema[B]), tail: JsonProperties[C])
-      extends JsonProperties[(A, B) *: C]
-
-extension [A, B](t: (A, JsonSchema[B]))
-  def **:[C <: Tuple](c: JsonProperties[C]): JsonProperties[(A, B)  *: C] = JsonProperties.Cons(t, c)
-
-val y: JsonSchema[JsonArray[JsonObject[(("id", String), ("name", String))]]] =
-  JsonSchema.Array(
-    JsonSchema.obj[
-      (("id", JsonSchema[String]), ("name", JsonSchema[String])),
-      (("id", String), ("name", String))
-    ](("id", JsonSchema.String), ("name", JsonSchema.String))
+type JsonSchema = json.Fix[[A] =>> JsonObject[
+  (
+      Option[("type", SchemaType)],
+      Option[("properties", JsonObject[Map[String, A]])],
+      Option[("required", JsonArray[String])],
+      Option[("items", A)],
+      Option[("additionalProperties", A)]
   )
-
-val x: JsonSchema[JsonArray[JsonObject[(("id", String), ("name", String))]]] =
-  JsonSchema.Array(
-    JsonSchema.Object(
-      JsonProperties.Cons(
-        ("id", JsonSchema.String),
-        JsonProperties.Cons(("name", JsonSchema.String), JsonProperties.Empty)
+]]
+object JsonSchema:
+  def apply(
+      `type`: Option[SchemaType] = None,
+      properties: Option[Map[String, JsonSchema]] = None,
+      required: Option[List[String]] = None,
+      items: Option[JsonSchema] = None,
+      additionalProperties: Option[JsonSchema] = None
+  ): JsonSchema = Fix(
+    JsonObject(
+      (
+        `type`.map("type" -> _),
+        properties
+          .map(values => "properties" -> JsonObject(values)),
+        required.map(values => "required" -> JsonArray(values)),
+        items.map("items" -> _),
+        additionalProperties.map(
+          "additionalProperties" -> _
+        ),
       )
     )
   )
+trait SchemaOf[A]:
+  def apply: JsonSchema
 
-type JsonType = "string" /: "object" /: "array" /: "null" /: "number"
-type SchemaType = Either[JsonType, JsonArray[JsonType]]
-object SchemaType:
-  def single(jsontype: JsonType): SchemaType = Left(jsontype)
-  def multiple(jsontypes: JsonType*): SchemaType = Right(JsonArray(jsontypes.toList))
+object SchemaOf:
+  given SchemaOf[String] with
+    def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.String))
+  given SchemaOf[Int] with
+    def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.Integer))
+  given SchemaOf[Boolean] with
+    def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.Boolean))
+  given SchemaOf[JsonNull] with
+    def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.Null))
+  given SchemaOf[Double] with
+    def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.Number))
+  given [A: SchemaOf]: SchemaOf[JsonArray[A]] with
+    def apply: JsonSchema = JsonSchema(
+      `type` = Some(SchemaType.Array),
+      items = Some(summon[SchemaOf[A]].apply)
+    )
+  given objWithProperties[A: PropertiesOf: RequiredOf]: SchemaOf[JsonObject[A]]
+  with
+    def apply: JsonSchema =
+      JsonSchema(
+        `type` = Some(SchemaType.Object),
+        properties = Some(summon[PropertiesOf[A]].apply),
+        required = Some(summon[RequiredOf[A]].apply)
+      )
+  given objMap[A: SchemaOf]: SchemaOf[JsonObject[Map[String, A]]] with
+    def apply: JsonSchema = JsonSchema(
+      `type` = Some(SchemaType.Object),
+      additionalProperties = Some(summon[SchemaOf[A]].apply)
+    )
 
-object JsonType:
-  val String: JsonType = Left("string")
-  val Object: JsonType = Right(Left("object"))
-  val Array: JsonType = Right(Right(Left("array")))
-  val Null: JsonType = Right(Right(Right(Left("null"))))
-  val Number: JsonType = Right(Right(Right(Right("number"))))
+trait PropertiesOf[A]:
+  def apply: Map[String, JsonSchema]
+object PropertiesOf:
+  given PropertiesOf[EmptyTuple] with
+    def apply: Map[String, JsonSchema] = Map.empty
+  given nonOpt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
+      : PropertiesOf[(A, B) *: C] with
+    def apply: Map[String, JsonSchema] = summon[
+      PropertiesOf[C]
+    ].apply + (summon[JsonFieldCodec[A]].encode -> summon[SchemaOf[B]].apply)
+  given opt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
+      : PropertiesOf[Option[(A, B)] *: C] with
+    def apply: Map[String, JsonSchema] = nonOpt[A, B, C].apply
 
-type EndSchema = JsonObject.Solo[(
-  ("type", SchemaType)
-)]
+trait RequiredOf[A]:
+  def apply: List[String]
 
-object EndSchema:
-  def single(jsonType: JsonType): EndSchema = JsonObject((("type", SchemaType.single(jsonType)) *: EmptyTuple))
-
-  given stringConversion: Conversion[JsonSchema[String], EndSchema] = _ => single(JsonType.String)
-  given intConversion: Conversion[JsonSchema[Int], EndSchema] = _ => single(JsonType.Number)
-  given doubleConversion: Conversion[JsonSchema[Double], EndSchema] = _ => single(JsonType.Number)
-  given nullConversion: Conversion[JsonSchema[Null], EndSchema] = _ => single(JsonType.Null)
-  given objectConversion: Conversion[JsonSchema[Null], EndSchema] = _ => single(JsonType.Object)
-  given arrayConversion: Conversion[JsonSchema[Null], EndSchema] = _ => single(JsonType.Array)
-  
-
-val z = summon[Encoder[EndSchema]]
-
+object RequiredOf:
+  given RequiredOf[EmptyTuple] with
+    def apply: List[String] = List.empty
+  given nonOpt[A: JsonFieldCodec, B, C <: Tuple: RequiredOf]
+      : RequiredOf[(A, B) *: C] with
+    def apply: List[String] =
+      summon[JsonFieldCodec[A]].encode :: summon[RequiredOf[C]].apply
+  given opt[A, C <: Tuple: RequiredOf]: RequiredOf[Option[A] *: C] with
+    def apply: List[String] = summon[RequiredOf[C]].apply
