@@ -3,14 +3,16 @@ package json
 import org.http4s.Uri
 import cats.syntax.option
 
-enum SchemaType:
-  case String
-  case Object
-  case Integer
-  case Boolean
-  case Null
-  case Array
-  case Number
+type SchemaType = String
+
+object SchemaType:
+  val String = "string"
+  val Object = "object"
+  val Integer = "integer"
+  val Boolean = "boolean"
+  val Null = "null"
+  val Array = "array"
+  val Number = "number"
 
 type JsonSchema = json.Fix[[A] =>> JsonObject[
   (
