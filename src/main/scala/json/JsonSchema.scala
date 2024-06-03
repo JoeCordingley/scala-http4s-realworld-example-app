@@ -2,6 +2,7 @@ package json
 
 import org.http4s.Uri
 import cats.syntax.option
+import io.circe.Encoder
 
 type SchemaType = String
 
@@ -14,16 +15,18 @@ object SchemaType:
   val Array = "array"
   val Number = "number"
 
-type JsonSchema = json.Fix[[A] =>> JsonObject[
-  (
-      Option[("type", SchemaType)],
-      Option[("properties", JsonObject[Map[String, A]])],
-      Option[("required", JsonArray[String])],
-      Option[("items", A)],
-      Option[("additionalProperties", A)]
-  )
-]]
+type JsonSchema = json.Fix[JsonSchema.Unfixed]
 object JsonSchema:
+
+  type Unfixed[A] = JsonObject[
+    (
+        Option[("type", SchemaType)],
+        Option[("properties", JsonObject[Map[String, A]])],
+        Option[("required", JsonArray[String])],
+        Option[("items", A)],
+        Option[("additionalProperties", A)]
+    )
+  ]
   def apply(
       `type`: Option[SchemaType] = None,
       properties: Option[Map[String, JsonSchema]] = None,
@@ -44,10 +47,18 @@ object JsonSchema:
       )
     )
   )
+  given encoder(using
+      e: => Encoder[Unfixed[Fix[Unfixed]]]
+  ): Encoder[JsonSchema] = e.contramap(_.unfix)
 trait SchemaOf[A]:
   def apply: JsonSchema
 
 object SchemaOf:
+  given objMap[A: SchemaOf]: SchemaOf[JsonObject[Map[String, A]]] with
+    def apply: JsonSchema = JsonSchema(
+      `type` = Some(SchemaType.Object),
+      additionalProperties = Some(summon[SchemaOf[A]].apply)
+    )
   given SchemaOf[String] with
     def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.String))
   given SchemaOf[Int] with
@@ -71,15 +82,13 @@ object SchemaOf:
         properties = Some(summon[PropertiesOf[A]].apply),
         required = Some(summon[RequiredOf[A]].apply)
       )
-  given objMap[A: SchemaOf]: SchemaOf[JsonObject[Map[String, A]]] with
-    def apply: JsonSchema = JsonSchema(
-      `type` = Some(SchemaType.Object),
-      additionalProperties = Some(summon[SchemaOf[A]].apply)
-    )
 
 trait PropertiesOf[A]:
   def apply: Map[String, JsonSchema]
 object PropertiesOf:
+  given opt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
+      : PropertiesOf[Option[(A, B)] *: C] with
+    def apply: Map[String, JsonSchema] = nonOpt[A, B, C].apply
   given PropertiesOf[EmptyTuple] with
     def apply: Map[String, JsonSchema] = Map.empty
   given nonOpt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
@@ -87,9 +96,6 @@ object PropertiesOf:
     def apply: Map[String, JsonSchema] = summon[
       PropertiesOf[C]
     ].apply + (summon[JsonFieldCodec[A]].encode -> summon[SchemaOf[B]].apply)
-  given opt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
-      : PropertiesOf[Option[(A, B)] *: C] with
-    def apply: Map[String, JsonSchema] = nonOpt[A, B, C].apply
 
 trait RequiredOf[A]:
   def apply: List[String]

@@ -89,7 +89,7 @@ object JsonMembersEncoder:
       ].encode(tail)
     case None *: tail => summon[JsonMembersEncoder[T]].encode(tail)
   }
-  given [V: Encoder]: JsonMembersEncoder[Map[String, V]] =
+  given [V](using e: => Encoder[V]): JsonMembersEncoder[Map[String, V]] =
     _.view.mapValues(Encoder[V].apply).toList
 
 type /:[L, R] = Either[L, R]
