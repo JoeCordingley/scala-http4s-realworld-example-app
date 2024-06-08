@@ -22,7 +22,8 @@ object SchemasTest extends TestSuite {
             "type": "object",
             "properties": {
               "email": {
-                "type": "string"
+                "type": "string",
+                "format": "email"
               },
               "password": {
                 "type": "string"

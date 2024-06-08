@@ -28,33 +28,24 @@ object UserRoutes {
       case rq @ POST -> Root / "users" / "login" as _ =>
         for {
           body <- rq.req.as[JsonCodec.WrappedUser[JsonCodec.AuthenticateUser]]
-          rs <- withValidation(
-            validAuthenticateUserBody(
-              AuthenticateUserBody.fromCodec(JsonObject.getSoloValue(body))
-            )
-          ) { valid =>
+          rs <-
             users
-              .authenticate(AuthenticateUserInput(valid.email, valid.password))
+              .authenticate(
+                AuthenticateUserInput.fromCodec(JsonObject.getSoloValue(body))
+              )
               .map(toOutput)
               .flatMap(toResponse)
-          }
         } yield rs
 
       case rq @ POST -> Root / "users" as _ =>
         for {
           body <- rq.req.as[JsonCodec.WrappedUser[JsonCodec.RegisterUser]]
-          rs <- withValidation(
-            validRegisterUserBody(
-              RegisterUserBody.fromCodec(JsonObject.getSoloValue(body))
+          rs <- users
+            .register(
+              RegisterUserInput.fromCodec(JsonObject.getSoloValue(body))
             )
-          ) { valid =>
-            users
-              .register(
-                RegisterUserInput(valid.username, valid.email, valid.password)
-              )
-              .map(toOutput)
-              .flatMap(toResponse)
-          }
+            .map(toOutput)
+            .flatMap(toResponse)
         } yield rs
 
       case GET -> Root / "user" as authUser =>

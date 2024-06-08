@@ -46,12 +46,6 @@ object valiation {
 
   type ValidationResult[A] = ValidatedNec[InvalidField, A]
 
-  def validAuthenticateUserBody(
-      body: AuthenticateUserBody
-  ): ValidationResult[AuthenticateUserBody] =
-    (validEmail(body.email), body.password.validNec)
-      .mapN(AuthenticateUserBody.apply)
-
   def validRegisterUserBody(
       body: RegisterUserBody
   ): ValidationResult[RegisterUserBody] =

@@ -5,7 +5,7 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
-import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray}
+import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
 
 object data {
 
@@ -21,9 +21,9 @@ object data {
       def apply[T]: T => WrappedUser[T] = t => JsonObject.Solo(("user", t))
 
     type AuthenticateUser =
-      JsonObject[(("email", String), ("password", String))]
+      JsonObject[(("email", Email), ("password", String))]
     type RegisterUser = JsonObject[
-      (("username", String), ("email", String), ("password", String))
+      (("username", String), ("email", Email), ("password", String))
     ]
     type UpdateUser = JsonObject[
       (
@@ -194,13 +194,6 @@ object data {
   }
 
   object RequestBodies {
-    case class AuthenticateUserBody(email: String, password: String)
-    object AuthenticateUserBody {
-      def fromCodec: JsonCodec.AuthenticateUser => AuthenticateUserBody = {
-        case JsonObject((("email", email), ("password", password))) =>
-          AuthenticateUserBody(email, password)
-      }
-    }
 
     case class RegisterUserBody(
         username: String,
@@ -210,7 +203,11 @@ object data {
     object RegisterUserBody {
       def fromCodec: JsonCodec.RegisterUser => RegisterUserBody = {
         case JsonObject(
-              (("username", username), ("email", email), ("password", password))
+              (
+                ("username", username),
+                ("email", Email(email)),
+                ("password", password)
+              )
             ) =>
           RegisterUserBody(username, email, password)
       }
@@ -281,6 +278,12 @@ object data {
   object ApiInputs {
     case class AuthenticateUserInput(email: String, password: String)
         extends ApiInput
+    object AuthenticateUserInput {
+      def fromCodec: JsonCodec.AuthenticateUser => AuthenticateUserInput = {
+        case JsonObject((("email", Email(email)), ("password", password))) =>
+          AuthenticateUserInput(email, password)
+      }
+    }
     case class RegisterUserInput(
         username: String,
         email: String,

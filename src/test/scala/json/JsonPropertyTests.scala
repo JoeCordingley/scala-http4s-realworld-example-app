@@ -38,7 +38,6 @@ object JsonPropertyTests extends Properties("JsonSchema") {
   }
 
   property("trees not so big") = forAll { (a: Tree[Unit]) =>
-    println(Encoder[Name].apply(Name("Joe")).noSpaces)
     Tree.size(a) <= 100
   }
 
