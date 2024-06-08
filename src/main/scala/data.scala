@@ -200,18 +200,7 @@ object data {
         email: String,
         password: String
     )
-    object RegisterUserBody {
-      def fromCodec: JsonCodec.RegisterUser => RegisterUserBody = {
-        case JsonObject(
-              (
-                ("username", username),
-                ("email", Email(email)),
-                ("password", password)
-              )
-            ) =>
-          RegisterUserBody(username, email, password)
-      }
-    }
+    object RegisterUserBody {}
 
     case class UpdateUserBody(
         username: Option[String],
@@ -289,6 +278,17 @@ object data {
         email: String,
         password: String
     ) extends ApiInput
+    object RegisterUserInput:
+      def fromCodec: JsonCodec.RegisterUser => RegisterUserInput = {
+        case JsonObject(
+              (
+                ("username", username),
+                ("email", Email(email)),
+                ("password", password)
+              )
+            ) =>
+          RegisterUserInput(username, email, password)
+      }
     case class GetUserInput(authUser: AuthUser) extends ApiInput
     case class UpdateUserInput(
         authUser: AuthUser,

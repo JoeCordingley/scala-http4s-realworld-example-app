@@ -14,18 +14,26 @@ import io.rw.app.repos.*
 import io.rw.app.routes.*
 import io.rw.app.security.*
 import org.http4s.*
+import org.http4s.client.Client
 import org.http4s.circe.CirceEntityCodec.*
+import org.http4s.syntax.literals.uri
 import tsec.mac.jca.HMACSHA256
 import test.io.rw.app.WithEmbededDbTestSuite
 import utest.*
 import cats.effect.unsafe.implicits.global
 
-object UserRoutesTests extends WithEmbededDbTestSuite {
-  def testUserApis[F[_]](registerFunction: RegisterUserInput => F[ApiResult[User]]): UserApis[F]{
-    override def authenticate(input: AuthenticateUserInput): F[ApiResult[User]] = registerFunction(input)
-    override def register(input: RegisterUserInput): F[ApiResult[User]]
-    override def get(input: GetUserInput): F[ApiResult[User]]
-    override def update(input: UpdateUserInput): F[ApiResult[User]]
+object UserRoutesTests extends TestSuite {
+  def testUserApis[F[_]](
+      registerFunction: RegisterUserInput => F[ApiResult[User]] = _ =>
+        throw new Exception("unimplemented")
+  ): UserApis[F] = new UserApis[F] {
+    override def authenticate(
+        input: AuthenticateUserInput
+    ): F[ApiResult[User]] = ???
+    override def register(input: RegisterUserInput): F[ApiResult[User]] =
+      registerFunction(input)
+    override def get(input: GetUserInput): F[ApiResult[User]] = ???
+    override def update(input: UpdateUserInput): F[ApiResult[User]] = ???
   }
 
   case class AuthenticateUserBody(email: String, password: String)
@@ -53,15 +61,12 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
       test("new user with invalid email should get error") {
         val registerBody =
           RegisterUserBody("username", "emailemail.com", "password123")
+        val apis = testUserApis[IO]()
+        val httpApp: HttpApp[IO] = mkApp(List(UserRoutes(apis)))
+        val client: Client[IO] = Client.fromHttpApp(httpApp)
 
-        val t = for {
-          rs <- post("users", WrappedUserBody(registerBody))
-          // errors <- rs.as[ValidationErrorResponse].map(_.errors)
-        } yield {
-          rs.status ==> Status.UnprocessableEntity
-          // errors.size ==> 1
-          // errors.get("email") ==> Some(List("is invalid"))
-        }
+        val request = Request[IO](method = Method.POST, uri = uri"/api/users").withEntity(registerBody)
+        val t = client.status(request).map( _ ==> Status.UnprocessableEntity)
 
         t.unsafeRunSync()
       }
@@ -318,10 +323,10 @@ object UserRoutesTests extends WithEmbededDbTestSuite {
 //      }
     }
   }
-  implicit val app: HttpApp[IO] = {
-    val passwordHasher = PasswordHasher.impl
-    val userRepo = UserRepo.impl(xa)
-    val apis = UserApis.impl(passwordHasher, token, userRepo)
-    mkApp(List(UserRoutes(apis)))
-  }
+//  implicit val app: HttpApp[IO] = {
+//    val passwordHasher = PasswordHasher.impl
+//    val userRepo = UserRepo.impl(xa)
+//    val apis = UserApis.impl(passwordHasher, token, userRepo)
+//    mkApp(List(UserRoutes(apis)))
+//  }
 }
