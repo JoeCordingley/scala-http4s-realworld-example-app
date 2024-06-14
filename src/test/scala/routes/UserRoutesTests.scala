@@ -4,6 +4,8 @@ import cats.*
 import cats.data.*
 import cats.effect.IO
 import io.circe.generic.auto.*
+import io.circe.Json
+import io.circe.literal.*
 import io.rw.app.apis.*
 import io.rw.app.data.*
 import io.rw.app.data.ApiErrors.*
@@ -21,73 +23,118 @@ import tsec.mac.jca.HMACSHA256
 import test.io.rw.app.WithEmbededDbTestSuite
 import utest.*
 import cats.effect.unsafe.implicits.global
+import io.circe
 
 object UserRoutesTests extends TestSuite {
   def testUserApis[F[_]](
-      registerFunction: RegisterUserInput => F[ApiResult[User]] = _ =>
-        throw new Exception("unimplemented")
+      registerFunction: RegisterUserInput => EitherT[F, ApiError, User]
   ): UserApis[F] = new UserApis[F] {
     override def authenticate(
         input: AuthenticateUserInput
     ): F[ApiResult[User]] = ???
-    override def register(input: RegisterUserInput): F[ApiResult[User]] =
+    override def register(
+        input: RegisterUserInput
+    ): EitherT[F, ApiError, User] =
       registerFunction(input)
     override def get(input: GetUserInput): F[ApiResult[User]] = ???
     override def update(input: UpdateUserInput): F[ApiResult[User]] = ???
   }
 
+  def userRoutesApp(
+      registerFunction: RegisterUserInput => EitherT[IO, ApiError, User]
+  ): HttpApp[IO] = mkApp(List(UserRoutes(testUserApis(registerFunction))))
+
   case class AuthenticateUserBody(email: String, password: String)
   case class WrappedUserBody[T](user: T)
+  def registerBody(username: String, email: String, password: String): Json =
+    circe.parser
+      .parse(s"""{
+            "user": {
+              "username": "$username",
+              "email": "$email",
+              "password": "$password"
+            }
+          }""")
+      .toOption
+      .get
   val tests = Tests {
     test("register") {
-//      test("new user should register and get valid token back") {
-//        val registerBody =
-//          RegisterUserBody("username", "email@email.com", "password123")
-//
-//        val t = for {
-//          rs <- post("users", WrappedUserBody(registerBody))
-//          user <- rs.as[RegisterUserOutput].map(_.user)
-//          validToken <- token.validate(user.token)
-//        } yield {
-//          rs.status ==> Status.Ok
-//          user.username ==> registerBody.username
-//          user.email ==> registerBody.email
-//          validToken.isDefined ==> true
-//        }
-//
-//        t.unsafeRunSync()
-//      }
+      test("new user should register and get valid token back") {
+        val app: HttpApp[IO] = userRoutesApp {
+          case RegisterUserInput(
+                "username",
+                "email@email.com",
+                "password123"
+              ) =>
+            EitherT.rightT(
+              User(
+                email = "email@email.com",
+                token = "token",
+                username = "username",
+                bio = Some("bio"),
+                image = Some("image")
+              )
+            )
+          case x => throw new Exception(s"unexpected $x")
+        }
+        val request = Request[IO](method = Method.POST, uri = uri"/api/users")
+          .withEntity(
+            registerBody("username", "email@email.com", "password123")
+          )
 
-      test("new user with invalid email should get error") {
-        val registerBody =
-          RegisterUserBody("username", "emailemail.com", "password123")
-        val apis = testUserApis[IO]()
-        val httpApp: HttpApp[IO] = mkApp(List(UserRoutes(apis)))
-        val client: Client[IO] = Client.fromHttpApp(httpApp)
-
-        val request = Request[IO](method = Method.POST, uri = uri"/api/users").withEntity(registerBody)
-        val t = client.status(request).map( _ ==> Status.UnprocessableEntity)
+        val t = for {
+          rs <- app.run(request)
+          user <- rs.as[RegisterUserOutput].map(_.user)
+        } yield {
+          rs.status ==> Status.Ok
+          user.username ==> "username"
+          user.email ==> "email@email.com"
+          user.token ==> "token"
+        }
 
         t.unsafeRunSync()
       }
 
-//      test("new user with short password shold get error") {
-//        val registerBody =
-//          RegisterUserBody("username", "email@email.com", "passwor")
-//
-//        val t = for {
-//          rs <- post("users", WrappedUserBody(registerBody))
-//          errors <- rs.as[ValidationErrorResponse].map(_.errors)
-//        } yield {
-//          rs.status ==> Status.UnprocessableEntity
-//          errors.size ==> 1
-//          errors.get("password") ==> Some(
-//            List("is too short (minimum is 8 character)")
-//          )
-//        }
-//
-//        t.unsafeRunSync()
-//      }
+      test("new user with invalid email should get error") {
+        val app: HttpApp[IO] = userRoutesApp { _ =>
+          throw new Exception("unimplemented")
+        }
+
+        val request = Request[IO](method = Method.POST, uri = uri"/api/users")
+          .withEntity(
+            registerBody("username", "emailemail.com", "password123")
+          )
+        val t = for {
+          rs <- app.run(request)
+          json <- rs.as[Json]
+        } yield {
+          rs.status ==> Status.UnprocessableEntity
+          json ==> json""" { "errors": { "body": ["invalid email"] } } """
+        }
+
+        t.unsafeRunSync()
+      }
+
+      test("new user with short password should get error") {
+        val request = Request[IO](method = Method.POST, uri = uri"/api/users")
+          .withEntity(
+            registerBody("username", "email@email.com", "passwor")
+          )
+
+        val t = for {
+          rs <- userRoutesApp { _ => throw new Exception("unimplemented") }
+            .run(request)
+          errors <- rs.as[ValidationErrorResponse].map(_.errors)
+        } yield {
+          rs.status ==> Status.UnprocessableEntity
+          errors.size ==> 1
+          errors.get("password") ==> Some(
+            List("is too short (minimum is 8 character)")
+          )
+        }
+
+        t.unsafeRunSync()
+      }
 //
 //      test(
 //        "new user with empty username, invalid email and short password shold get errors"

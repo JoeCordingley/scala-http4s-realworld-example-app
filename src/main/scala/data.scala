@@ -6,6 +6,7 @@ import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
 import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
+import cats.data.NonEmptyList
 
 object data {
 
@@ -375,6 +376,7 @@ object data {
 
   sealed trait ApiError
   object ApiErrors {
+    case class InvalidJson(message: String) extends ApiError
     case class UserNotFound() extends ApiError
     case class UserFollowingHimself(profile: Profile) extends ApiError
     case class UserUnfollowingHimself(profile: Profile) extends ApiError
@@ -487,4 +489,12 @@ object data {
   type ValidationErrors = Map[String, List[String]]
   case class ValidationErrorResponse(errors: ValidationErrors)
   case class NotFoundResponse(status: Int, error: String)
+
+  type ErrorsListJson =
+    JsonObject.Solo[("errors", JsonObject.Solo[("body", JsonArray[String])])]
+  object ErrorsListJson:
+    def fromErrors(errors: NonEmptyList[String]): ErrorsListJson =
+      JsonObject.Solo(
+        "errors" -> JsonObject.Solo("body" -> JsonArray(errors.toList))
+      )
 }

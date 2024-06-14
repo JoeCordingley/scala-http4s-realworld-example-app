@@ -16,7 +16,7 @@ trait UserApis[F[_]] {
   def authenticate(
       input: AuthenticateUserInput
   ): F[ApiResult[User]]
-  def register(input: RegisterUserInput): F[ApiResult[User]]
+  def register(input: RegisterUserInput): EitherT[F, ApiError, User]
   def get(input: GetUserInput): F[ApiResult[User]]
   def update(input: UpdateUserInput): F[ApiResult[User]]
 }
@@ -49,33 +49,34 @@ object UserApis {
       )
     }
 
-    def register(input: RegisterUserInput): F[ApiResult[User]] = {
-      def mkUserEntity(hashedPassword: String): E.User = {
-        val now = Instant.now
-        E.User(
-          input.email,
-          input.username,
-          hashedPassword,
-          None,
-          None,
-          now,
-          now
-        )
+    def register(input: RegisterUserInput): EitherT[F, ApiError, User] =
+      EitherT {
+        def mkUserEntity(hashedPassword: String): E.User = {
+          val now = Instant.now
+          E.User(
+            input.email,
+            input.username,
+            hashedPassword,
+            None,
+            None,
+            now,
+            now
+          )
+        }
+
+        val userWithToken = for {
+          _ <- EitherT(emailAndUsernameNotExist(input.email, input.username))
+          hashedPsw <- EitherT.liftF(passwordHasher.hash(input.password))
+          userWithId <- EitherT.liftF(
+            userRepo.createUser(mkUserEntity(hashedPsw))
+          )
+          token <- EitherT.liftF[F, ApiError, String](
+            token.generate(JwtTokenPayload(userWithId.id))
+          )
+        } yield mkUser(userWithId.entity, token)
+
+        userWithToken.value
       }
-
-      val userWithToken = for {
-        _ <- EitherT(emailAndUsernameNotExist(input.email, input.username))
-        hashedPsw <- EitherT.liftF(passwordHasher.hash(input.password))
-        userWithId <- EitherT.liftF(
-          userRepo.createUser(mkUserEntity(hashedPsw))
-        )
-        token <- EitherT.liftF[F, ApiError, String](
-          token.generate(JwtTokenPayload(userWithId.id))
-        )
-      } yield mkUser(userWithId.entity, token)
-
-      userWithToken.value
-    }
 
     def get(input: GetUserInput): F[ApiResult[User]] = {
       val userWithToken = for {

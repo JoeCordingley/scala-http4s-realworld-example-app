@@ -21,6 +21,36 @@ import org.http4s.headers.Authorization
 package object routes {
 
   type AppRoutes[F[_]] = AuthedRoutes[Option[AuthUser], F]
+//  object AppRoutes:
+//    def fromValidatedRoutes[F[_]: Monad](
+//        validated: ValidatedRoutes[F]
+//    ): AppRoutes[F] = {
+//      val dsl = new Http4sDsl[F] {}
+//      import dsl.*
+//      Kleisli(validated).flatMapF {
+//        case Right(response) => response.pure
+//        case Left(errors) =>
+//          OptionT.liftF(
+//            UnprocessableEntity(ErrorsListJson.fromErrors(errors))
+//          )
+//      }
+//    }
+//
+//  type ValidatedRoutes[F[_]] =
+//    AuthedRequest[F, Option[AuthUser]] => OptionT[F, Either[Errors, Response[
+//      F
+//    ]]]
+//  type Errors = NonEmptyList[String]
+
+//  case class JsonEncoded[A](value: A)
+//  object JsonEncoded:
+//  given [F[_], A: Decoder]: EntityDecoder[F, JsonEncoded[A]] = circeEntityDecoder[Json].flatMapR(json => Decoder[A].decodeAccumulating(json.hcursor).toEitherT)
+//    case class JsonFailure(cause: Option[Throwable] = None, failures: NonEmptyList[String]) extends DecodeFailure{
+//      override def message: String = "invalid json format"
+//      override def toHttpResponse[F[_]](httpVersion: HttpVersion): Response[F] = ???
+//    }
+//    object JsonFailure:
+//      def fromValidated: Validated
 
   def authUser[F[_]: Monad](
       token: JwtToken[F]
@@ -71,6 +101,10 @@ package object routes {
           validationErrorsToResponse(
             NonEmptyChain.one(InvalidEmail(List("has already been taken")))
           )
+        )
+      case Left(InvalidJson(message)) =>
+        UnprocessableEntity(
+          ErrorsListJson.fromErrors(NonEmptyList.one(message))
         )
       case Left(_: UsernameAlreadyExists) =>
         UnprocessableEntity(
