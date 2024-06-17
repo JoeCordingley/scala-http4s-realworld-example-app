@@ -109,7 +109,7 @@ object UserRoutesTests extends TestSuite {
           json <- rs.as[Json]
         } yield {
           rs.status ==> Status.UnprocessableEntity
-          json ==> json""" { "errors": { "body": ["invalid email"] } } """
+          json ==> json"""{ "errors": { "body": ["invalid email"] } } """
         }
 
         t.unsafeRunSync()
@@ -124,13 +124,10 @@ object UserRoutesTests extends TestSuite {
         val t = for {
           rs <- userRoutesApp { _ => throw new Exception("unimplemented") }
             .run(request)
-          errors <- rs.as[ValidationErrorResponse].map(_.errors)
+          json <- rs.as[Json]
         } yield {
           rs.status ==> Status.UnprocessableEntity
-          errors.size ==> 1
-          errors.get("password") ==> Some(
-            List("is too short (minimum is 8 character)")
-          )
+          json ==> json"""{ "errors": { "body": ["password is invalid"] } } """
         }
 
         t.unsafeRunSync()

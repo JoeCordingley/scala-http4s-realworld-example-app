@@ -25,7 +25,9 @@ object JsonSchema:
         Option[("required", JsonArray[String])],
         Option[("items", A)],
         Option[("additionalProperties", A)],
-        Option[("format", String)]
+        Option[("format", String)],
+        Option[("minLength", Int)],
+        Option[("maxLength", Int)]
     )
   ]
   def apply(
@@ -34,7 +36,9 @@ object JsonSchema:
       required: Option[List[String]] = None,
       items: Option[JsonSchema] = None,
       additionalProperties: Option[JsonSchema] = None,
-      format: Option[String] = None
+      format: Option[String] = None,
+      minLength: Option[Int] = None,
+      maxLength: Option[Int] = None
   ): JsonSchema = Fix(
     JsonObject(
       (
@@ -46,7 +50,9 @@ object JsonSchema:
         additionalProperties.map(
           "additionalProperties" -> _
         ),
-        format.map("format" -> _)
+        format.map("format" -> _),
+        minLength.map("minLength" -> _),
+        maxLength.map("maxLength" -> _),
       )
     )
   )
@@ -73,7 +79,8 @@ object SchemaOf:
   given SchemaOf[Double] with
     def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.Number))
   given SchemaOf[Email] with
-    def apply: JsonSchema = JsonSchema(`type` = Some(SchemaType.String), format = Some("email"))
+    def apply: JsonSchema =
+      JsonSchema(`type` = Some(SchemaType.String), format = Some("email"))
   given [A: SchemaOf]: SchemaOf[JsonArray[A]] with
     def apply: JsonSchema = JsonSchema(
       `type` = Some(SchemaType.Array),

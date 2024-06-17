@@ -7,6 +7,9 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
 import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
 import cats.data.NonEmptyList
+import io.rw.app.valiation.validPassword
+import cats.syntax.all.*
+import json.{SchemaType, SchemaOf, JsonSchema}
 
 object data {
 
@@ -23,8 +26,24 @@ object data {
 
     type AuthenticateUser =
       JsonObject[(("email", Email), ("password", String))]
+
+    case class Password(value: String)
+    object Password:
+      given Decoder[Password] = Decoder[String].emap(fromString)
+      given SchemaOf[Password] with
+        def apply: JsonSchema = JsonSchema(
+          `type` = Some(SchemaType.String),
+          minLength = Some(8),
+          maxLength = Some(100)
+        )
+      def fromString: String => Either[String, Password] =
+        validPassword(_)
+          .map(Password(_))
+          .toEither
+          .leftMap(_ => "password is invalid")
+
     type RegisterUser = JsonObject[
-      (("username", String), ("email", Email), ("password", String))
+      (("username", String), ("email", Email), ("password", Password))
     ]
     type UpdateUser = JsonObject[
       (
@@ -285,7 +304,7 @@ object data {
               (
                 ("username", username),
                 ("email", Email(email)),
-                ("password", password)
+                ("password", JsonCodec.Password(password))
               )
             ) =>
           RegisterUserInput(username, email, password)
