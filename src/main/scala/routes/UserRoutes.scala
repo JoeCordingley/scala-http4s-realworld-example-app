@@ -7,10 +7,11 @@ import cats.implicits.*
 import io.rw.app.apis.*
 import io.rw.app.data.{AuthUser, ApiErrors}
 import io.rw.app.data.AuthUser
+import io.rw.app.data.UserApiInput
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.RequestBodies.*
 import io.rw.app.data.{JsonCodec, User}
-import io.rw.app.valiation.*
+import io.rw.app.validation.*
 import io.circe.{Json, Decoder}
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
@@ -28,7 +29,14 @@ object UserRoutes {
   def decodeJsonRequest[F[_]: Concurrent, A: Decoder](
       request: Request[F]
   ): EitherT[F, ApiError, A] = EitherT(
-    request.as[Json].map(_.as[A].leftMap(e => ApiErrors.InvalidJson(e.message)))
+    request
+      .as[Json]
+      .map(json =>
+        Decoder[A]
+          .decodeAccumulating(json.hcursor)
+          .leftMap(e => ApiErrors.InvalidJson(e.map(_.message)))
+          .toEither
+      )
   )
 
   def apply[F[_]: Async](users: UserApis[F]): AppRoutes[F] = {
@@ -38,16 +46,17 @@ object UserRoutes {
 
     AuthedRoutes.of[Option[AuthUser], F] {
       case rq @ POST -> Root / "users" / "login" as _ =>
-        for {
-          body <- rq.req.as[JsonCodec.WrappedUser[JsonCodec.AuthenticateUser]]
-          rs <-
-            users
-              .authenticate(
-                AuthenticateUserInput.fromCodec(JsonObject.getSoloValue(body))
-              )
-              .map(toOutput)
-              .flatMap(toResponse)
-        } yield rs
+        {
+          for {
+            body <- decodeJsonRequest[
+              F,
+              JsonCodec.WrappedUser[JsonCodec.AuthenticateUser]
+            ](rq.req)
+            rs <- users(
+              AuthenticateUserInput.fromCodec(JsonObject.getSoloValue(body))
+            )
+          } yield JsonCodec.WrappedUser.apply(JsonCodec.User.fromData(rs))
+        }.value.flatMap(toResponse)
 
       case rq @ POST -> Root / "users" as _ =>
         {
@@ -55,19 +64,18 @@ object UserRoutes {
             body <- decodeJsonRequest[F, JsonCodec.WrappedUser[
               JsonCodec.RegisterUser
             ]](rq.req)
-            user <-
-              users
-                .register(
-                  RegisterUserInput.fromCodec(JsonObject.getSoloValue(body))
-                )
+            user <- users(
+              RegisterUserInput.fromCodec(JsonObject.getSoloValue(body))
+            )
           } yield JsonCodec.WrappedUser.apply(JsonCodec.User.fromData(user))
         }.value.flatMap(toResponse)
 
       case GET -> Root / "user" as authUser =>
         withAuthUser(authUser) { u =>
           users
-            .get(GetUserInput(u))
-            .map(toOutput)
+            .apply(UserApiInput.GetUserInput(u))
+            .map(JsonCodec.WrappedUser.apply compose JsonCodec.User.fromData)
+            .value
             .flatMap(toResponse)
         }
 
@@ -81,8 +89,8 @@ object UserRoutes {
               )
             ) { valid =>
               users
-                .update(
-                  UpdateUserInput(
+                .apply(
+                  UserApiInput.UpdateUserInput(
                     u,
                     valid.username,
                     valid.email,
@@ -91,7 +99,10 @@ object UserRoutes {
                     valid.image
                   )
                 )
-                .map(toOutput)
+                .map(
+                  JsonCodec.WrappedUser.apply compose JsonCodec.User.fromData
+                )
+                .value
                 .flatMap(toResponse)
             }
           }

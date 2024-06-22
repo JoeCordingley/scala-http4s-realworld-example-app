@@ -7,19 +7,13 @@ import io.rw.app.data.{Entities as E, *}
 import io.rw.app.data.ApiErrors.*
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.ApiOutputs.*
+import io.rw.app.data.UserApiInput
 import io.rw.app.repos.*
 import io.rw.app.security.{JwtToken, PasswordHasher}
 import java.time.Instant
 
 //TODO ApiResult to F
-trait UserApis[F[_]] {
-  def authenticate(
-      input: AuthenticateUserInput
-  ): F[ApiResult[User]]
-  def register(input: RegisterUserInput): EitherT[F, ApiError, User]
-  def get(input: GetUserInput): F[ApiResult[User]]
-  def update(input: UpdateUserInput): F[ApiResult[User]]
-}
+type UserApis[F[_]] = UserApiInput => EitherT[F, ApiError, User]
 
 object UserApis {
 
@@ -27,113 +21,114 @@ object UserApis {
       passwordHasher: PasswordHasher[F],
       token: JwtToken[F],
       userRepo: UserRepo[F]
-  ) = new UserApis[F] {
+  ) = {
 
     def authenticate(
-        input: AuthenticateUserInput
-    ): F[ApiResult[User]] = {
+        email: String,
+        password: String
+    ): EitherT[F, ApiError, User] = {
       val userWithToken = for {
-        userWithId <- OptionT(userRepo.findUserByEmail(input.email))
+        userWithId <- OptionT(userRepo.findUserByEmail(email))
         _ <- OptionT(
           passwordHasher
-            .validate(input.password, userWithId.entity.password)
+            .validate(password, userWithId.entity.password)
             .map(if (_) Some(true) else None)
         )
         token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value.map(
-        _.toRight(
-          UserNotFoundOrPasswordNotMatched()
-        )
+      userWithToken.toRight(
+        UserNotFoundOrPasswordNotMatched
       )
     }
 
-    def register(input: RegisterUserInput): EitherT[F, ApiError, User] =
-      EitherT {
-        def mkUserEntity(hashedPassword: String): E.User = {
-          val now = Instant.now
-          E.User(
-            input.email,
-            input.username,
-            hashedPassword,
-            None,
-            None,
-            now,
-            now
-          )
-        }
-
-        val userWithToken = for {
-          _ <- EitherT(emailAndUsernameNotExist(input.email, input.username))
-          hashedPsw <- EitherT.liftF(passwordHasher.hash(input.password))
-          userWithId <- EitherT.liftF(
-            userRepo.createUser(mkUserEntity(hashedPsw))
-          )
-          token <- EitherT.liftF[F, ApiError, String](
-            token.generate(JwtTokenPayload(userWithId.id))
-          )
-        } yield mkUser(userWithId.entity, token)
-
-        userWithToken.value
-      }
-
-    def get(input: GetUserInput): F[ApiResult[User]] = {
-      val userWithToken = for {
-        userWithId <- OptionT(userRepo.findUserById(input.authUser))
-        token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
-      } yield mkUser(userWithId.entity, token)
-
-      userWithToken.value.map(
-        _.toRight(UserNotFound())
-      )
-    }
-
-    def update(input: UpdateUserInput): F[ApiResult[User]] = {
-      def mkUserForUpdateEntity(
-          hashedPassword: Option[String]
-      ): E.UserForUpdate = {
+    def register(
+        username: String,
+        email: String,
+        password: String
+    ): EitherT[F, ApiError, User] = {
+      def mkUserEntity(hashedPassword: String): E.User = {
         val now = Instant.now
-        E.UserForUpdate(
-          input.username,
-          input.email,
+        E.User(
+          email,
+          username,
           hashedPassword,
-          input.bio,
-          input.image,
+          None,
+          None,
+          now,
           now
         )
       }
 
       val userWithToken = for {
-        _ <- input.email.traverse(e =>
-          EitherT(emailNotTakenByOthers(e, input.authUser))
-        )
-        _ <- input.username.traverse(u =>
-          EitherT(usernameNotTakenByOthers(u, input.authUser))
-        )
-        hashedPsw <- EitherT.liftF(input.password.traverse(passwordHasher.hash))
+        _ <- emailAndUsernameNotExist(email, username)
+        hashedPsw <- EitherT.liftF(passwordHasher.hash(password))
         userWithId <- EitherT.liftF(
-          userRepo.updateUser(input.authUser, mkUserForUpdateEntity(hashedPsw))
+          userRepo.createUser(mkUserEntity(hashedPsw))
         )
         token <- EitherT.liftF[F, ApiError, String](
           token.generate(JwtTokenPayload(userWithId.id))
         )
       } yield mkUser(userWithId.entity, token)
 
-      userWithToken.value
+      userWithToken
+    }
+
+    def get(authUser: AuthUser): EitherT[F, ApiError, User] = {
+      val userWithToken = for {
+        userWithId <- OptionT(userRepo.findUserById(authUser))
+        token <- OptionT.liftF(token.generate(JwtTokenPayload(userWithId.id)))
+      } yield mkUser(userWithId.entity, token)
+
+      userWithToken.toRight(UserNotFound)
+    }
+
+    def update(
+        authUser: AuthUser,
+        username: Option[String],
+        email: Option[String],
+        password: Option[String],
+        bio: Option[String],
+        image: Option[String]
+    ): EitherT[F, ApiError, User] = {
+      def mkUserForUpdateEntity(
+          hashedPassword: Option[String]
+      ): E.UserForUpdate = {
+        val now = Instant.now
+        E.UserForUpdate(
+          username,
+          email,
+          hashedPassword,
+          bio,
+          image,
+          now
+        )
+      }
+
+      val userWithToken = for {
+        _ <- email.traverse(e => EitherT(emailNotTakenByOthers(e, authUser)))
+        _ <- username.traverse(u =>
+          EitherT(usernameNotTakenByOthers(u, authUser))
+        )
+        hashedPsw <- EitherT.liftF(password.traverse(passwordHasher.hash))
+        userWithId <- EitherT.liftF(
+          userRepo.updateUser(authUser, mkUserForUpdateEntity(hashedPsw))
+        )
+        token <- EitherT.liftF[F, ApiError, String](
+          token.generate(JwtTokenPayload(userWithId.id))
+        )
+      } yield mkUser(userWithId.entity, token)
+
+      userWithToken
     }
 
     def emailAndUsernameNotExist(
         email: String,
         username: String
-    ): F[Either[ApiError, Boolean]] = {
-      val notExists = for {
-        emailNotExists <- EitherT(emailNotExists(email))
-        usernameNotExists <- EitherT(usernameNotExists(username))
-      } yield (emailNotExists && usernameNotExists)
-
-      notExists.value
-    }
+    ): EitherT[F, ApiError, Boolean] = for {
+      emailNotExists <- EitherT(emailNotExists(email))
+      usernameNotExists <- EitherT(usernameNotExists(username))
+    } yield (emailNotExists && usernameNotExists)
 
     def notExists(
         user: Option[E.WithId[E.User]],
@@ -142,12 +137,12 @@ object UserApis {
       if (user.isEmpty) Right(true) else Left(error)
 
     def emailNotExists(email: String): F[Either[ApiError, Boolean]] =
-      userRepo.findUserByEmail(email).map(notExists(_, EmailAlreadyExists()))
+      userRepo.findUserByEmail(email).map(notExists(_, EmailAlreadyExists))
 
     def usernameNotExists(username: String): F[Either[ApiError, Boolean]] =
       userRepo
         .findUserByUsername(username)
-        .map(notExists(_, UsernameAlreadyExists()))
+        .map(notExists(_, UsernameAlreadyExists))
 
     def notTakenByOthers(
         user: Option[E.WithId[E.User]],
@@ -164,7 +159,7 @@ object UserApis {
     ): F[Either[ApiError, Boolean]] =
       userRepo
         .findUserByEmail(email)
-        .map(notTakenByOthers(_, authUser, EmailAlreadyExists()))
+        .map(notTakenByOthers(_, authUser, EmailAlreadyExists))
 
     def usernameNotTakenByOthers(
         username: String,
@@ -172,6 +167,34 @@ object UserApis {
     ): F[Either[ApiError, Boolean]] =
       userRepo
         .findUserByUsername(username)
-        .map(notTakenByOthers(_, authUser, UsernameAlreadyExists()))
+        .map(notTakenByOthers(_, authUser, UsernameAlreadyExists))
+    val f: UserApis[F] = {
+      case UserApiInput.AuthenticateUserInput(
+            email,
+            password
+          ) =>
+        authenticate(email, password)
+      case UserApiInput.RegisterUserInput(
+            username,
+            email,
+            password
+          ) =>
+        register(
+          username,
+          email,
+          password
+        )
+      case UserApiInput.GetUserInput(authUser) => get(authUser)
+      case UserApiInput.UpdateUserInput(
+            authUser,
+            username,
+            email,
+            password,
+            bio,
+            image
+          ) =>
+        update(authUser, username, email, password, bio, image)
+    }
+    f
   }
 }

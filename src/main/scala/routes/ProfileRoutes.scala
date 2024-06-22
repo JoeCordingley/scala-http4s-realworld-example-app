@@ -6,7 +6,7 @@ import io.rw.app.apis.*
 import io.rw.app.data.{AuthUser, JsonCodec}
 import io.rw.app.data.ApiInputs.*
 import io.rw.app.data.RequestBodies.*
-import io.rw.app.valiation.*
+import io.rw.app.validation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl

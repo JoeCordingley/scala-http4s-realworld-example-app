@@ -98,7 +98,7 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound)
       )
     }
 
@@ -166,14 +166,14 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound)
       )
     }
 
     def delete(input: DeleteArticleInput): F[ApiResult[Unit]] =
       articleRepo
         .deleteArticleBySlug(input.slug, input.authUser)
-        .map(_.toRight(ArticleNotFound()))
+        .map(_.toRight(ArticleNotFound))
 
     def favorite(
         input: FavoriteArticleInput
@@ -204,7 +204,7 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound)
       )
     }
 
@@ -235,7 +235,7 @@ object ArticleApis {
       )
 
       article.value.map(
-        _.toRight(ArticleNotFound())
+        _.toRight(ArticleNotFound)
       )
     }
 

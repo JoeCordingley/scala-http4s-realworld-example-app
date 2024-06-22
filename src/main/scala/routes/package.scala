@@ -9,8 +9,8 @@ import io.circe.generic.auto.*
 import io.rw.app.data.*
 import io.rw.app.data.ApiErrors.*
 import io.rw.app.security.JwtToken
-import io.rw.app.valiation.*
-import io.rw.app.valiation.InvalidFields.*
+import io.rw.app.validation.*
+import io.rw.app.validation.InvalidFields.*
 import io.rw.app.utils.*
 import org.http4s.*
 import org.http4s.circe.*
@@ -21,49 +21,17 @@ import org.http4s.headers.Authorization
 package object routes {
 
   type AppRoutes[F[_]] = AuthedRoutes[Option[AuthUser], F]
-//  object AppRoutes:
-//    def fromValidatedRoutes[F[_]: Monad](
-//        validated: ValidatedRoutes[F]
-//    ): AppRoutes[F] = {
-//      val dsl = new Http4sDsl[F] {}
-//      import dsl.*
-//      Kleisli(validated).flatMapF {
-//        case Right(response) => response.pure
-//        case Left(errors) =>
-//          OptionT.liftF(
-//            UnprocessableEntity(ErrorsListJson.fromErrors(errors))
-//          )
-//      }
-//    }
-//
-//  type ValidatedRoutes[F[_]] =
-//    AuthedRequest[F, Option[AuthUser]] => OptionT[F, Either[Errors, Response[
-//      F
-//    ]]]
-//  type Errors = NonEmptyList[String]
-
-//  case class JsonEncoded[A](value: A)
-//  object JsonEncoded:
-//  given [F[_], A: Decoder]: EntityDecoder[F, JsonEncoded[A]] = circeEntityDecoder[Json].flatMapR(json => Decoder[A].decodeAccumulating(json.hcursor).toEitherT)
-//    case class JsonFailure(cause: Option[Throwable] = None, failures: NonEmptyList[String]) extends DecodeFailure{
-//      override def message: String = "invalid json format"
-//      override def toHttpResponse[F[_]](httpVersion: HttpVersion): Response[F] = ???
-//    }
-//    object JsonFailure:
-//      def fromValidated: Validated
 
   def authUser[F[_]: Monad](
       token: JwtToken[F]
   ): Kleisli[[A] =>> OptionT[F, A], Request[F], Option[AuthUser]] =
     Kleisli { rq =>
       OptionT.liftF {
-        for {
-          header <- Monad[F].pure(rq.headers.get[Authorization])
-          jwt <- Monad[F].pure(
-            header.flatMap(h => extractTokenValue(h.credentials.renderString))
-          )
-          payload <- jwt.flatTraverse(token.validate(_))
-        } yield payload.map(_.authUser)
+        rq.headers
+          .get[Authorization]
+          .flatMap(h => extractTokenValue(h.credentials.renderString))
+          .flatTraverse(token.validate(_))
+          .map(_.map(_.authUser))
       }
     }
 
@@ -91,34 +59,33 @@ package object routes {
     import dsl.*
 
     res match {
-      case Right(r)                 => Ok(r)
-      case Left(_: UserNotFound)    => NotFound(defaultNotFoundResponse)
-      case Left(_: ProfileNotFound) => NotFound(defaultNotFoundResponse)
-      case Left(_: ArticleNotFound) => NotFound(defaultNotFoundResponse)
-      case Left(_: CommentNotFound) => NotFound(defaultNotFoundResponse)
-      case Left(_: EmailAlreadyExists) =>
-        UnprocessableEntity(
-          validationErrorsToResponse(
-            NonEmptyChain.one(InvalidEmail(List("has already been taken")))
-          )
-        )
-      case Left(InvalidJson(message)) =>
-        UnprocessableEntity(
-          ErrorsListJson.fromErrors(NonEmptyList.one(message))
-        )
-      case Left(_: UsernameAlreadyExists) =>
-        UnprocessableEntity(
-          validationErrorsToResponse(
-            NonEmptyChain.one(InvalidUsername(List("has already been taken")))
-          )
-        )
-      case Left(_: UserNotFoundOrPasswordNotMatched) =>
-        UnprocessableEntity(
-          validationErrorsToResponse(
-            NonEmptyChain.one(InvalidEmailOrPassword(List("is invalid")))
-          )
-        )
-      case Left(e) => InternalServerError()
+      case Right(r) => Ok(r)
+      case Left(error) =>
+        error match {
+          case UserNotFound    => NotFound(defaultNotFoundResponse)
+          case ProfileNotFound => NotFound(defaultNotFoundResponse)
+          case ArticleNotFound => NotFound(defaultNotFoundResponse)
+          case CommentNotFound => NotFound(defaultNotFoundResponse)
+          case EmailAlreadyExists =>
+            UnprocessableEntity(
+              ErrorsListJson.fromErrors(NonEmptyList.one("email taken"))
+            )
+          case InvalidJson(messages) =>
+            UnprocessableEntity(
+              ErrorsListJson.fromErrors(messages)
+            )
+          case UsernameAlreadyExists =>
+            UnprocessableEntity(
+              ErrorsListJson.fromErrors(NonEmptyList.one("username taken"))
+            )
+          case UserNotFoundOrPasswordNotMatched =>
+            UnprocessableEntity(
+              ErrorsListJson.fromErrors(
+                NonEmptyList.one("email or password is invalid")
+              )
+            )
+          case e => InternalServerError()
+        }
     }
   }
 

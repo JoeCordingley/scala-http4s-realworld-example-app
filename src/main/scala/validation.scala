@@ -5,7 +5,7 @@ import cats.data.Validated.*
 import cats.implicits.*
 import io.rw.app.data.RequestBodies.*
 
-object valiation {
+object validation {
 
   sealed trait InvalidField {
     def errors: List[String]

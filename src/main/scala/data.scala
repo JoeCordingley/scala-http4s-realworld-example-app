@@ -7,7 +7,7 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
 import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
 import cats.data.NonEmptyList
-import io.rw.app.valiation.validPassword
+import io.rw.app.validation.*
 import cats.syntax.all.*
 import json.{SchemaType, SchemaOf, JsonSchema}
 
@@ -42,8 +42,23 @@ object data {
           .toEither
           .leftMap(_ => "password is invalid")
 
+    case class Username(value: String)
+    object Username:
+      given Decoder[Username] = Decoder[String].emap(fromString)
+      given SchemaOf[Username] with
+        def apply: JsonSchema = JsonSchema(
+          `type` = Some(SchemaType.String),
+          minLength = Some(1),
+          maxLength = Some(25)
+        )
+      def fromString: String => Either[String, Username] =
+        validUsername(_)
+          .map(Username(_))
+          .toEither
+          .leftMap(_ => "invalid username")
+
     type RegisterUser = JsonObject[
-      (("username", String), ("email", Email), ("password", Password))
+      (("username", Username), ("email", Email), ("password", Password))
     ]
     type UpdateUser = JsonObject[
       (
@@ -283,41 +298,42 @@ object data {
     case class AddCommentBody(body: String)
   }
 
-  sealed trait ApiInput
-  object ApiInputs {
-    case class AuthenticateUserInput(email: String, password: String)
-        extends ApiInput
-    object AuthenticateUserInput {
-      def fromCodec: JsonCodec.AuthenticateUser => AuthenticateUserInput = {
-        case JsonObject((("email", Email(email)), ("password", password))) =>
-          AuthenticateUserInput(email, password)
-      }
-    }
-    case class RegisterUserInput(
+  enum UserApiInput:
+    case AuthenticateUserInput(email: String, password: String)
+    case RegisterUserInput(
         username: String,
         email: String,
         password: String
-    ) extends ApiInput
-    object RegisterUserInput:
-      def fromCodec: JsonCodec.RegisterUser => RegisterUserInput = {
-        case JsonObject(
-              (
-                ("username", username),
-                ("email", Email(email)),
-                ("password", JsonCodec.Password(password))
-              )
-            ) =>
-          RegisterUserInput(username, email, password)
-      }
-    case class GetUserInput(authUser: AuthUser) extends ApiInput
-    case class UpdateUserInput(
+    )
+    case GetUserInput(authUser: AuthUser)
+    case UpdateUserInput(
         authUser: AuthUser,
         username: Option[String],
         email: Option[String],
         password: Option[String],
         bio: Option[String],
         image: Option[String]
-    ) extends ApiInput
+    )
+
+  sealed trait ApiInput
+  object ApiInputs {
+    object AuthenticateUserInput {
+      def fromCodec: JsonCodec.AuthenticateUser => UserApiInput = {
+        case JsonObject((("email", Email(email)), ("password", password))) =>
+          UserApiInput.AuthenticateUserInput(email, password)
+      }
+    }
+    object RegisterUserInput:
+      def fromCodec: JsonCodec.RegisterUser => UserApiInput = {
+        case JsonObject(
+              (
+                ("username", JsonCodec.Username(username)),
+                ("email", Email(email)),
+                ("password", JsonCodec.Password(password))
+              )
+            ) =>
+          UserApiInput.RegisterUserInput(username, email, password)
+      }
     case class GetProfileInput(authUser: Option[AuthUser], username: String)
         extends ApiInput
     case class FollowUserInput(authUser: AuthUser, username: String)
@@ -395,16 +411,16 @@ object data {
 
   sealed trait ApiError
   object ApiErrors {
-    case class InvalidJson(message: String) extends ApiError
-    case class UserNotFound() extends ApiError
+    case class InvalidJson(messages: NonEmptyList[String]) extends ApiError
+    case object UserNotFound extends ApiError
     case class UserFollowingHimself(profile: Profile) extends ApiError
     case class UserUnfollowingHimself(profile: Profile) extends ApiError
-    case class UserNotFoundOrPasswordNotMatched() extends ApiError
-    case class EmailAlreadyExists() extends ApiError
-    case class UsernameAlreadyExists() extends ApiError
-    case class ProfileNotFound() extends ApiError
-    case class ArticleNotFound() extends ApiError
-    case class CommentNotFound() extends ApiError
+    case object UserNotFoundOrPasswordNotMatched extends ApiError
+    case object EmailAlreadyExists extends ApiError
+    case object UsernameAlreadyExists extends ApiError
+    case object ProfileNotFound extends ApiError
+    case object ArticleNotFound extends ApiError
+    case object CommentNotFound extends ApiError
   }
 
   object Entities {

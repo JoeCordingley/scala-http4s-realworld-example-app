@@ -34,7 +34,7 @@ object ProfileApis {
         } yield mkProfile(userWithId.entity, following)
 
         profile.value.map(
-          _.toRight(ProfileNotFound())
+          _.toRight(ProfileNotFound)
         )
       }
 
@@ -42,7 +42,7 @@ object ProfileApis {
         val profile = for {
           userWithId <- EitherT.fromOptionF(
             userRepo.findUserByUsername(input.username),
-            ProfileNotFound()
+            ProfileNotFound
           )
           _ <- EitherT.cond[F](
             input.authUser != userWithId.id,
@@ -65,7 +65,7 @@ object ProfileApis {
         val profile = for {
           userWithId <- EitherT.fromOptionF(
             userRepo.findUserByUsername(input.username),
-            ProfileNotFound()
+            ProfileNotFound
           )
           _ <- EitherT.cond[F](
             input.authUser != userWithId.id,

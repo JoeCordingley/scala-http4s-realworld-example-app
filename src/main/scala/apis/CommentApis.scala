@@ -46,7 +46,7 @@ object CommentApis {
       } yield mkComment(commentWithId, commentAuthor.entity, following)
 
       comment.value
-        .map(_.toRight(ArticleNotFound()))
+        .map(_.toRight(ArticleNotFound))
     }
 
     def get(input: GetCommentsInput): F[ApiResult[GetCommentsOutput]] = {
@@ -65,7 +65,7 @@ object CommentApis {
 
       comments.value
         .map(_.map(GetCommentsOutput.apply))
-        .map(_.toRight(ArticleNotFound()))
+        .map(_.toRight(ArticleNotFound))
     }
 
     def delete(input: DeleteCommentInput): F[ApiResult[Unit]] = {
@@ -81,7 +81,7 @@ object CommentApis {
       } yield ()
 
       deleted.value
-        .map(_.toRight(CommentNotFound()))
+        .map(_.toRight(CommentNotFound))
     }
   }
 }

@@ -2,8 +2,8 @@ package test.io.rw.app
 
 import cats.data.*
 import cats.implicits.*
-import io.rw.app.valiation.*
-import io.rw.app.valiation.validators.*
+import io.rw.app.validation.*
+import io.rw.app.validation.validators.*
 import utest.*
 
 object validationTests extends TestSuite {
