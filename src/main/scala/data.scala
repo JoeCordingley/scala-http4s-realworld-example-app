@@ -25,14 +25,14 @@ object data {
       def apply[T]: T => WrappedUser[T] = t => JsonObject.Solo(("user", t))
 
     type AuthenticateUser =
-      JsonObject[(("email", Email), ("password", String))]
+      JsonObject[(("email", Email), ("password", Password))]
 
     case class Password(value: String)
     object Password:
       given Decoder[Password] = Decoder[String].emap(fromString)
       given SchemaOf[Password] with
         def apply: JsonSchema = JsonSchema(
-          `type` = Some(SchemaType.String),
+          `type` = Some(Left(SchemaType.String)),
           minLength = Some(8),
           maxLength = Some(100)
         )
@@ -47,7 +47,7 @@ object data {
       given Decoder[Username] = Decoder[String].emap(fromString)
       given SchemaOf[Username] with
         def apply: JsonSchema = JsonSchema(
-          `type` = Some(SchemaType.String),
+          `type` = Some(Left(SchemaType.String)),
           minLength = Some(1),
           maxLength = Some(25)
         )
@@ -62,9 +62,9 @@ object data {
     ]
     type UpdateUser = JsonObject[
       (
-          Option[("username", Nullable[String])],
-          Option[("email", Nullable[String])],
-          Option[("password", Nullable[String])],
+          Option[("username", Nullable[Username])],
+          Option[("email", Nullable[Email])],
+          Option[("password", Nullable[Password])],
           Option[("bio", Nullable[String])],
           Option[("image", Nullable[String])],
       )
@@ -251,9 +251,9 @@ object data {
               (maybeUsername, maybeEmail, maybePassword, maybeBio, maybeImage)
             ) =>
           UpdateUserBody(
-            username = oNValue["username"](maybeUsername),
-            email = oNValue["email"](maybeEmail),
-            password = oNValue["password"](maybePassword),
+            username = oNValue["username"](maybeUsername).map(_.value),
+            email = oNValue["email"](maybeEmail).map(_.value),
+            password = oNValue["password"](maybePassword).map(_.value),
             bio = oNValue["bio"](maybeBio),
             image = oNValue["image"](maybeImage)
           )
@@ -308,18 +308,23 @@ object data {
     case GetUserInput(authUser: AuthUser)
     case UpdateUserInput(
         authUser: AuthUser,
-        username: Option[String],
-        email: Option[String],
-        password: Option[String],
-        bio: Option[String],
-        image: Option[String]
+        username: Option[String] = None,
+        email: Option[String] = None,
+        password: Option[String] = None,
+        bio: Option[String] = None,
+        image: Option[String] = None
     )
 
   sealed trait ApiInput
   object ApiInputs {
     object AuthenticateUserInput {
       def fromCodec: JsonCodec.AuthenticateUser => UserApiInput = {
-        case JsonObject((("email", Email(email)), ("password", password))) =>
+        case JsonObject(
+              (
+                ("email", Email(email)),
+                ("password", JsonCodec.Password(password))
+              )
+            ) =>
           UserApiInput.AuthenticateUserInput(email, password)
       }
     }

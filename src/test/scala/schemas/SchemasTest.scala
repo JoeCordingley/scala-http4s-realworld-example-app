@@ -4,6 +4,7 @@ import utest.*
 import io.circe.syntax.*
 import io.circe.Encoder
 import json.*
+import json.given
 import json.JsonSchema.given
 import io.circe.literal.*
 
@@ -26,7 +27,9 @@ object SchemasTest extends TestSuite {
                 "format": "email"
               },
               "password": {
-                "type": "string"
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 100
               }
             },
             "required": ["email", "password"]
