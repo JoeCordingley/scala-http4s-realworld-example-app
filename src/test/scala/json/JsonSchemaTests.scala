@@ -87,7 +87,7 @@ object JsonSchemaTests extends TestSuite {
         }
       }"""
       assert(
-        maybeType(schema).flatMap(_.as[StrictSet[Json]]) == Right(
+        maybeAnyOf(schema).flatMap(_.as[StrictSet[Json]]) == Right(
           StrictSet(Set(expectedFirstSchema, expectedSecondSchema))
         )
       )
