@@ -3,6 +3,7 @@ package json
 import org.http4s.Uri
 import cats.syntax.option
 import io.circe.Encoder
+import cats.syntax.all.*
 
 type SchemaType = String
 
@@ -17,6 +18,20 @@ object SchemaType:
 
 type JsonSchema = json.Fix[JsonSchema.Unfixed]
 object JsonSchema:
+  def or(x: JsonSchema, y: JsonSchema): JsonSchema =
+    JsonSchema(
+      `type` = (types(x), types(y)).mapN { case (xTypes, yTypes) =>
+        singular((xTypes ++ yTypes).distinct).map(JsonArray(_))
+      },
+      properties = JsonSchema.properties(x) <+> JsonSchema.properties(y),
+      required = JsonSchema.required(x) <+> JsonSchema.required(y),
+      anyOf = None
+//        for {
+//        (xTypes, yTypes) <- (types(x), types(y)).tupled
+//        if (xTypes.contains("object") && yTypes.contains("object"))
+//
+//      }
+    )
 
   type Unfixed[A] = JsonObject[
     (
@@ -27,32 +42,39 @@ object JsonSchema:
         Option[("additionalProperties", A)],
         Option[("format", String)],
         Option[("minLength", Int)],
-        Option[("maxLength", Int)]
+        Option[("maxLength", Int)],
+        Option[("anyOf", JsonArray[A])]
     )
   ]
-  def types: JsonSchema => List[SchemaType] = _.unfix match {
-    case JsonObject(t) =>
-      for {
-        (_, either) <- t.head.toList
-        types <- either.fold(List(_), _.elements)
-      } yield types
+  def types: JsonSchema => Option[List[SchemaType]] = _.unfix.pairs.head.map {
+    case (_, Left(e))              => List(e)
+    case (_, Right(JsonArray(es))) => es
   }
+  def singular[A]: List[A] => Either[A, List[A]] = {
+    case List(x) => Left(x)
+    case xs      => Right(xs)
+  }
+  def properties: JsonSchema => Option[JsonObject[(Map[String, JsonSchema])]] =
+    _.unfix.pairs.tail.head.map(_._2)
+  def required: JsonSchema => Option[JsonArray[String]] =
+    _.unfix.pairs._3.map(_._2)
+
   def apply(
       `type`: Option[Either[SchemaType, JsonArray[SchemaType]]] = None,
-      properties: Option[Map[String, JsonSchema]] = None,
-      required: Option[List[String]] = None,
+      properties: Option[JsonObject[Map[String, JsonSchema]]] = None,
+      required: Option[JsonArray[String]] = None,
       items: Option[JsonSchema] = None,
       additionalProperties: Option[JsonSchema] = None,
       format: Option[String] = None,
       minLength: Option[Int] = None,
-      maxLength: Option[Int] = None
+      maxLength: Option[Int] = None,
+      anyOf: Option[JsonArray[JsonSchema]] = None
   ): JsonSchema = Fix(
     JsonObject(
       (
         `type`.map("type" -> _),
-        properties
-          .map(values => "properties" -> JsonObject(values)),
-        required.map(values => "required" -> JsonArray(values)),
+        properties.map("properties" -> _),
+        required.map("required" -> _),
         items.map("items" -> _),
         additionalProperties.map(
           "additionalProperties" -> _
@@ -60,6 +82,7 @@ object JsonSchema:
         format.map("format" -> _),
         minLength.map("minLength" -> _),
         maxLength.map("maxLength" -> _),
+        anyOf.map("anyOf" -> _),
       )
     )
   )
@@ -98,22 +121,12 @@ object SchemaOf:
     def apply: JsonSchema =
       JsonSchema(
         `type` = Some(Left(SchemaType.Object)),
-        properties = Some(summon[PropertiesOf[A]].apply),
-        required = Some(summon[RequiredOf[A]].apply)
+        properties = Some(JsonObject(summon[PropertiesOf[A]].apply)),
+        required = Some(JsonArray(summon[RequiredOf[A]].apply))
       )
   given [A: SchemaOf, B: SchemaOf]: SchemaOf[Either[A, B]] with
     def apply: JsonSchema =
-      JsonSchema(`type` =
-        Some(
-          Right(
-            JsonArray(
-              JsonSchema.types(summon[SchemaOf[A]].apply) ++ JsonSchema.types(
-                summon[SchemaOf[B]].apply
-              )
-            )
-          )
-        )
-      )
+      JsonSchema.or(summon[SchemaOf[A]].apply, summon[SchemaOf[B]].apply)
 
 trait PropertiesOf[A]:
   def apply: Map[String, JsonSchema]
