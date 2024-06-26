@@ -76,14 +76,16 @@ trait JsonMembersEncoder[A]:
 
 object JsonMembersEncoder:
   given JsonMembersEncoder[EmptyTuple] = _ => List.empty
-  given nonOpt[K: JsonFieldCodec, V: Encoder, T <: Tuple: JsonMembersEncoder]
-      : JsonMembersEncoder[(K, V) *: T] = { case (key, value) *: tail =>
+  given nonOpt[K: JsonFieldCodec, V, T <: Tuple: JsonMembersEncoder](using
+      v: => Encoder[V]
+  ): JsonMembersEncoder[(K, V) *: T] = { case (key, value) *: tail =>
     (summon[JsonFieldCodec[K]].encode, Encoder[V].apply(value)) :: summon[
       JsonMembersEncoder[T]
     ].encode(tail)
   }
-  given opt[K: JsonFieldCodec, V: Encoder, T <: Tuple: JsonMembersEncoder]
-      : JsonMembersEncoder[Option[(K, V)] *: T] = {
+  given opt[K: JsonFieldCodec, V, T <: Tuple: JsonMembersEncoder](using
+      v: => Encoder[V]
+  ): JsonMembersEncoder[Option[(K, V)] *: T] = {
     case Some((key, value)) *: tail =>
       (summon[JsonFieldCodec[K]].encode, Encoder[V].apply(value)) :: summon[
         JsonMembersEncoder[T]

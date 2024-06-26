@@ -74,24 +74,24 @@ object JsonSchemaTests extends TestSuite {
         "properties": {
           "first": {
             "type": "string"
-          },
-          "required": ["first"]
-        }
+          }
+        },
+        "required": ["first"]
       }"""
       val expectedSecondSchema = json"""{
         "properties": {
           "second": {
-            "type": "string"
-          },
-          "required": ["second"]
-        }
+            "type": "integer"
+          }
+        },
+        "required": ["second"]
       }"""
       assert(
         maybeAnyOf(schema).flatMap(_.as[StrictSet[Json]]) == Right(
           StrictSet(Set(expectedFirstSchema, expectedSecondSchema))
         )
       )
-      // assert(Right(schema) == maybeType(schema).flatMap(expectedSchema))
+      assert(Right(schema) == maybeAnyOf(schema).flatMap(expectedSchema))
       schema
     }
   }

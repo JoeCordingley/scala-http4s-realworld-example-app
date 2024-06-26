@@ -18,47 +18,6 @@ object SchemaType:
 
 type JsonSchema = json.Fix[JsonSchema.Unfixed]
 object JsonSchema:
-  def or(x: JsonSchema, y: JsonSchema): JsonSchema =
-    JsonSchema(
-      `type` = (types(x), types(y)).mapN { case (xTypes, yTypes) =>
-        singular((xTypes ++ yTypes).distinct).map(JsonArray(_))
-      },
-      properties = JsonSchema.properties(x) <+> JsonSchema.properties(y),
-      required = JsonSchema.required(x) <+> JsonSchema.required(y),
-      anyOf = None
-//        for {
-//        (xTypes, yTypes) <- (types(x), types(y)).tupled
-//        if (xTypes.contains("object") && yTypes.contains("object"))
-//
-//      }
-    )
-
-  type Unfixed[A] = JsonObject[
-    (
-        Option[("type", Either[SchemaType, JsonArray[SchemaType]])],
-        Option[("properties", JsonObject[Map[String, A]])],
-        Option[("required", JsonArray[String])],
-        Option[("items", A)],
-        Option[("additionalProperties", A)],
-        Option[("format", String)],
-        Option[("minLength", Int)],
-        Option[("maxLength", Int)],
-        Option[("anyOf", JsonArray[A])]
-    )
-  ]
-  def types: JsonSchema => Option[List[SchemaType]] = _.unfix.pairs.head.map {
-    case (_, Left(e))              => List(e)
-    case (_, Right(JsonArray(es))) => es
-  }
-  def singular[A]: List[A] => Either[A, List[A]] = {
-    case List(x) => Left(x)
-    case xs      => Right(xs)
-  }
-  def properties: JsonSchema => Option[JsonObject[(Map[String, JsonSchema])]] =
-    _.unfix.pairs.tail.head.map(_._2)
-  def required: JsonSchema => Option[JsonArray[String]] =
-    _.unfix.pairs._3.map(_._2)
-
   def apply(
       `type`: Option[Either[SchemaType, JsonArray[SchemaType]]] = None,
       properties: Option[JsonObject[Map[String, JsonSchema]]] = None,
@@ -89,6 +48,67 @@ object JsonSchema:
   given encoder(using
       e: => Encoder[Unfixed[Fix[Unfixed]]]
   ): Encoder[JsonSchema] = e.contramap(_.unfix)
+  type Unfixed[A] = JsonObject[
+    (
+        Option[("type", Either[SchemaType, JsonArray[SchemaType]])],
+        Option[("properties", JsonObject[Map[String, A]])],
+        Option[("required", JsonArray[String])],
+        Option[("items", A)],
+        Option[("additionalProperties", A)],
+        Option[("format", String)],
+        Option[("minLength", Int)],
+        Option[("maxLength", Int)],
+        Option[("anyOf", JsonArray[A])]
+    )
+  ]
+  def getProperties
+      : JsonSchema => Option[JsonObject[(Map[String, JsonSchema])]] =
+    _.unfix.pairs.tail.head.map(_._2)
+
+  def getRequired: JsonSchema => Option[JsonArray[String]] =
+    _.unfix.pairs._3.map(_._2)
+
+  def propertiesAndRequired(schema: JsonSchema): JsonSchema =
+    JsonSchema.apply(
+      properties = getProperties(schema),
+      required = getRequired(schema)
+    )
+
+  def types: JsonSchema => Option[List[SchemaType]] = _.unfix.pairs.head.map {
+    case (_, Left(e))              => List(e)
+    case (_, Right(JsonArray(es))) => es
+  }
+
+  def concernsObjects(schema: JsonSchema): Boolean =
+    types(schema).exists(_.contains(SchemaType.Object))
+
+  def or(left: JsonSchema, right: JsonSchema): JsonSchema = {
+    val isComplex = concernsObjects(left) && concernsObjects(right)
+    JsonSchema(
+      `type` = (types(left), types(right)).mapN { case (xTypes, yTypes) =>
+        singular((xTypes ++ yTypes).distinct).map(JsonArray(_))
+      },
+      properties =
+        if (isComplex) None
+        else JsonSchema.getProperties(left) <+> JsonSchema.getProperties(right),
+      required =
+        if (isComplex) None
+        else JsonSchema.getRequired(left) <+> JsonSchema.getRequired(right),
+      anyOf =
+        for {
+          (xTypes, yTypes) <- (types(left), types(right)).tupled
+          if (xTypes.contains("object") && yTypes.contains("object"))
+        } yield JsonArray(
+          List(propertiesAndRequired(left), propertiesAndRequired(right))
+        )
+    )
+  }
+
+  def singular[A]: List[A] => Either[A, List[A]] = {
+    case List(x) => Left(x)
+    case xs      => Right(xs)
+  }
+
 trait SchemaOf[A]:
   def apply: JsonSchema
 
