@@ -67,11 +67,17 @@ object JsonSchema:
 
   def getRequired: JsonSchema => Option[JsonArray[String]] =
     _.unfix.pairs._3.map(_._2)
+  def getAdditionalProperties: JsonSchema => Option[JsonSchema] =
+    _.unfix.pairs._5.map(_._2)
 
-  def propertiesAndRequired(schema: JsonSchema): JsonSchema =
+  def getAnyOf: JsonSchema => Option[JsonArray[JsonSchema]] =
+    _.unfix.pairs.last.map(_._2)
+
+  def objectSpecificValidation(schema: JsonSchema): JsonSchema =
     JsonSchema.apply(
       properties = getProperties(schema),
-      required = getRequired(schema)
+      required = getRequired(schema),
+      additionalProperties = getAdditionalProperties(schema)
     )
 
   def types: JsonSchema => Option[List[SchemaType]] = _.unfix.pairs.head.map {
@@ -99,7 +105,13 @@ object JsonSchema:
           (xTypes, yTypes) <- (types(left), types(right)).tupled
           if (xTypes.contains("object") && yTypes.contains("object"))
         } yield JsonArray(
-          List(propertiesAndRequired(left), propertiesAndRequired(right))
+          getAnyOf(left)
+            .map(_.elements)
+            .getOrElse(
+              List(objectSpecificValidation(left))
+            ) ++ getAnyOf(right)
+            .map(_.elements)
+            .getOrElse(List(objectSpecificValidation(right)))
         )
     )
   }
