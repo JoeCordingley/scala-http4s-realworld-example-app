@@ -16,19 +16,23 @@ object SchemaType:
   val Array = "array"
   val Number = "number"
 
-type JsonSchema = json.Fix[JsonSchema.Unfixed]
-object JsonSchema:
+type JsonSchemaCodec = json.Fix[JsonSchemaCodec.Unfixed]
+
+enum JsonSchema:
+  case String
+
+object JsonSchemaCodec:
   def apply(
       `type`: Option[Either[SchemaType, JsonArray[SchemaType]]] = None,
-      properties: Option[JsonObject[Map[String, JsonSchema]]] = None,
+      properties: Option[JsonObject[Map[String, JsonSchemaCodec]]] = None,
       required: Option[JsonArray[String]] = None,
-      items: Option[JsonSchema] = None,
-      additionalProperties: Option[JsonSchema] = None,
+      items: Option[JsonSchemaCodec] = None,
+      additionalProperties: Option[JsonSchemaCodec] = None,
       format: Option[String] = None,
       minLength: Option[Int] = None,
       maxLength: Option[Int] = None,
-      anyOf: Option[JsonArray[JsonSchema]] = None
-  ): JsonSchema = Fix(
+      anyOf: Option[JsonArray[JsonSchemaCodec]] = None
+  ): JsonSchemaCodec = Fix(
     JsonObject(
       (
         `type`.map("type" -> _),
@@ -45,9 +49,13 @@ object JsonSchema:
       )
     )
   )
+  def fromJsonSchema: JsonSchema => JsonSchemaCodec = {
+    case JsonSchema.String =>
+      JsonSchemaCodec(`type` = Some(Left(SchemaType.String)))
+  }
   given encoder(using
       e: => Encoder[Unfixed[Fix[Unfixed]]]
-  ): Encoder[JsonSchema] = e.contramap(_.unfix)
+  ): Encoder[JsonSchemaCodec] = e.contramap(_.unfix)
   type Unfixed[A] = JsonObject[
     (
         Option[("type", Either[SchemaType, JsonArray[SchemaType]])],
@@ -62,44 +70,51 @@ object JsonSchema:
     )
   ]
   def getProperties
-      : JsonSchema => Option[JsonObject[(Map[String, JsonSchema])]] =
+      : JsonSchemaCodec => Option[JsonObject[(Map[String, JsonSchemaCodec])]] =
     _.unfix.pairs.tail.head.map(_._2)
 
-  def getRequired: JsonSchema => Option[JsonArray[String]] =
+  def getRequired: JsonSchemaCodec => Option[JsonArray[String]] =
     _.unfix.pairs._3.map(_._2)
-  def getAdditionalProperties: JsonSchema => Option[JsonSchema] =
+  def getAdditionalProperties: JsonSchemaCodec => Option[JsonSchemaCodec] =
     _.unfix.pairs._5.map(_._2)
 
-  def getAnyOf: JsonSchema => Option[JsonArray[JsonSchema]] =
+  def getAnyOf: JsonSchemaCodec => Option[JsonArray[JsonSchemaCodec]] =
     _.unfix.pairs.last.map(_._2)
 
-  def objectSpecificValidation(schema: JsonSchema): JsonSchema =
-    JsonSchema.apply(
+  def objectSpecificValidation(schema: JsonSchemaCodec): JsonSchemaCodec =
+    JsonSchemaCodec.apply(
       properties = getProperties(schema),
       required = getRequired(schema),
       additionalProperties = getAdditionalProperties(schema)
     )
 
-  def types: JsonSchema => Option[List[SchemaType]] = _.unfix.pairs.head.map {
-    case (_, Left(e))              => List(e)
-    case (_, Right(JsonArray(es))) => es
-  }
+  def types: JsonSchemaCodec => Option[List[SchemaType]] =
+    _.unfix.pairs.head.map {
+      case (_, Left(e))              => List(e)
+      case (_, Right(JsonArray(es))) => es
+    }
 
-  def concernsObjects(schema: JsonSchema): Boolean =
+  def concernsObjects(schema: JsonSchemaCodec): Boolean =
     types(schema).exists(_.contains(SchemaType.Object))
 
-  def or(left: JsonSchema, right: JsonSchema): JsonSchema = {
+  def or(left: JsonSchemaCodec, right: JsonSchemaCodec): JsonSchemaCodec = {
     val isComplex = concernsObjects(left) && concernsObjects(right)
-    JsonSchema(
+    JsonSchemaCodec(
       `type` = (types(left), types(right)).mapN { case (xTypes, yTypes) =>
         singular((xTypes ++ yTypes).distinct).map(JsonArray(_))
       },
       properties =
         if (isComplex) None
-        else JsonSchema.getProperties(left) <+> JsonSchema.getProperties(right),
+        else
+          JsonSchemaCodec.getProperties(left) <+> JsonSchemaCodec.getProperties(
+            right
+          ),
       required =
         if (isComplex) None
-        else JsonSchema.getRequired(left) <+> JsonSchema.getRequired(right),
+        else
+          JsonSchemaCodec.getRequired(left) <+> JsonSchemaCodec.getRequired(
+            right
+          ),
       anyOf =
         for {
           (xTypes, yTypes) <- (types(left), types(right)).tupled
@@ -122,55 +137,63 @@ object JsonSchema:
   }
 
 trait SchemaOf[A]:
-  def apply: JsonSchema
+  def apply: JsonSchemaCodec
 
 object SchemaOf:
   given objMap[A: SchemaOf]: SchemaOf[JsonObject[Map[String, A]]] with
-    def apply: JsonSchema = JsonSchema(
+    def apply: JsonSchemaCodec = JsonSchemaCodec(
       `type` = Some(Left(SchemaType.Object)),
       additionalProperties = Some(summon[SchemaOf[A]].apply)
     )
   given SchemaOf[String] with
-    def apply: JsonSchema = JsonSchema(`type` = Some(Left(SchemaType.String)))
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(`type` = Some(Left(SchemaType.String)))
   given SchemaOf[Int] with
-    def apply: JsonSchema = JsonSchema(`type` = Some(Left(SchemaType.Integer)))
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(`type` = Some(Left(SchemaType.Integer)))
   given SchemaOf[Boolean] with
-    def apply: JsonSchema = JsonSchema(`type` = Some(Left(SchemaType.Boolean)))
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(`type` = Some(Left(SchemaType.Boolean)))
   given SchemaOf[JsonNull] with
-    def apply: JsonSchema = JsonSchema(`type` = Some(Left(SchemaType.Null)))
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(`type` = Some(Left(SchemaType.Null)))
   given SchemaOf[Double] with
-    def apply: JsonSchema = JsonSchema(`type` = Some(Left(SchemaType.Number)))
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(`type` = Some(Left(SchemaType.Number)))
   given SchemaOf[Email] with
-    def apply: JsonSchema =
-      JsonSchema(`type` = Some(Left(SchemaType.String)), format = Some("email"))
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(
+        `type` = Some(Left(SchemaType.String)),
+        format = Some("email")
+      )
   given [A: SchemaOf]: SchemaOf[JsonArray[A]] with
-    def apply: JsonSchema = JsonSchema(
+    def apply: JsonSchemaCodec = JsonSchemaCodec(
       `type` = Some(Left(SchemaType.Array)),
       items = Some(summon[SchemaOf[A]].apply)
     )
   given objWithProperties[A: PropertiesOf: RequiredOf]: SchemaOf[JsonObject[A]]
   with
-    def apply: JsonSchema =
-      JsonSchema(
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec(
         `type` = Some(Left(SchemaType.Object)),
         properties = Some(JsonObject(summon[PropertiesOf[A]].apply)),
         required = Some(JsonArray(summon[RequiredOf[A]].apply))
       )
   given [A: SchemaOf, B: SchemaOf]: SchemaOf[Either[A, B]] with
-    def apply: JsonSchema =
-      JsonSchema.or(summon[SchemaOf[A]].apply, summon[SchemaOf[B]].apply)
+    def apply: JsonSchemaCodec =
+      JsonSchemaCodec.or(summon[SchemaOf[A]].apply, summon[SchemaOf[B]].apply)
 
 trait PropertiesOf[A]:
-  def apply: Map[String, JsonSchema]
+  def apply: Map[String, JsonSchemaCodec]
 object PropertiesOf:
   given opt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
       : PropertiesOf[Option[(A, B)] *: C] with
-    def apply: Map[String, JsonSchema] = nonOpt[A, B, C].apply
+    def apply: Map[String, JsonSchemaCodec] = nonOpt[A, B, C].apply
   given PropertiesOf[EmptyTuple] with
-    def apply: Map[String, JsonSchema] = Map.empty
+    def apply: Map[String, JsonSchemaCodec] = Map.empty
   given nonOpt[A: JsonFieldCodec, B: SchemaOf, C <: Tuple: PropertiesOf]
       : PropertiesOf[(A, B) *: C] with
-    def apply: Map[String, JsonSchema] = summon[
+    def apply: Map[String, JsonSchemaCodec] = summon[
       PropertiesOf[C]
     ].apply + (summon[JsonFieldCodec[A]].encode -> summon[SchemaOf[B]].apply)
 

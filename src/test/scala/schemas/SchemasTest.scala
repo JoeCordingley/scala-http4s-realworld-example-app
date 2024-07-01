@@ -5,7 +5,7 @@ import io.circe.syntax.*
 import io.circe.Encoder
 import json.*
 import json.given
-import json.JsonSchema.given
+import json.JsonSchemaCodec.given
 import io.circe.literal.*
 
 object SchemasTest extends TestSuite {

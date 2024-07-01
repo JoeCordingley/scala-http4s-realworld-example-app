@@ -9,7 +9,7 @@ import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
 import cats.data.NonEmptyList
 import io.rw.app.validation.*
 import cats.syntax.all.*
-import json.{SchemaType, SchemaOf, JsonSchema}
+import json.{SchemaType, SchemaOf, JsonSchemaCodec}
 
 object data {
 
@@ -31,7 +31,7 @@ object data {
     object Password:
       given Decoder[Password] = Decoder[String].emap(fromString)
       given SchemaOf[Password] with
-        def apply: JsonSchema = JsonSchema(
+        def apply: JsonSchemaCodec = JsonSchemaCodec(
           `type` = Some(Left(SchemaType.String)),
           minLength = Some(8),
           maxLength = Some(100)
@@ -46,7 +46,7 @@ object data {
     object Username:
       given Decoder[Username] = Decoder[String].emap(fromString)
       given SchemaOf[Username] with
-        def apply: JsonSchema = JsonSchema(
+        def apply: JsonSchemaCodec = JsonSchemaCodec(
           `type` = Some(Left(SchemaType.String)),
           minLength = Some(1),
           maxLength = Some(25)
