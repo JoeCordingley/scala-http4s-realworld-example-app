@@ -3,10 +3,10 @@ package schemas
 import json.*
 import io.rw.app.data.JsonCodec.*
 
-object UserSchemas:
-  val authenticateUser: JsonSchemaCodec =
-    summon[SchemaOf[WrappedUser[AuthenticateUser]]].apply
-  val regiserUser: JsonSchemaCodec =
-    summon[SchemaOf[WrappedUser[RegisterUser]]].apply
-  val updateUser: JsonSchemaCodec =
-    summon[SchemaOf[WrappedUser[UpdateUser]]].apply
+object UserSchemas
+//:
+//  val authenticateUser: JsonSchemaCodec =
+//    JsonSchemaCodec.of[WrappedUser[AuthenticateUser]]
+//  val regiserUser: JsonSchemaCodec =
+//    JsonSchemaCodec.of[WrappedUser[RegisterUser]]
+//  val updateUser: JsonSchemaCodec = JsonSchemaCodec.of[WrappedUser[UpdateUser]]

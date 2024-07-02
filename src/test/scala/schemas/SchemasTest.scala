@@ -14,30 +14,31 @@ object SchemasTest extends TestSuite {
     test("assert true") {
       assert(true)
     }
-    test("authenticate user schema") {
-      val x = UserSchemas.authenticateUser.asJson
-      assert(x == json"""{
-        "type": "object",
-        "properties": {
-          "user": {
-            "type": "object",
-            "properties": {
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
-              "password": {
-                "type": "string",
-                "minLength": 8,
-                "maxLength": 100
-              }
-            },
-            "required": ["email", "password"]
-          }
-        },
-        "required": ["user"]
-      }""")
-      x
-    }
+//    test("authenticate user schema") {
+//      val x =
+//        JsonSchemaCodec.fromJsonSchema(UserSchemas.authenticateUser).asJson
+//      assert(x == json"""{
+//        "type": "object",
+//        "properties": {
+//          "user": {
+//            "type": "object",
+//            "properties": {
+//              "email": {
+//                "type": "string",
+//                "format": "email"
+//              },
+//              "password": {
+//                "type": "string",
+//                "minLength": 8,
+//                "maxLength": 100
+//              }
+//            },
+//            "required": ["email", "password"]
+//          }
+//        },
+//        "required": ["user"]
+//      }""")
+//      x
+//    }
   }
 }

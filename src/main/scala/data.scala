@@ -30,12 +30,12 @@ object data {
     case class Password(value: String)
     object Password:
       given Decoder[Password] = Decoder[String].emap(fromString)
-      given SchemaOf[Password] with
-        def apply: JsonSchemaCodec = JsonSchemaCodec(
-          `type` = Some(Left(SchemaType.String)),
-          minLength = Some(8),
-          maxLength = Some(100)
-        )
+//      given SchemaOf[Password] with
+//        def apply: JsonSchemaCodec = JsonSchemaCodec(
+//          `type` = Some(Left(SchemaType.String)),
+//          minLength = Some(8),
+//          maxLength = Some(100)
+//        )
       def fromString: String => Either[String, Password] =
         validPassword(_)
           .map(Password(_))
@@ -45,12 +45,12 @@ object data {
     case class Username(value: String)
     object Username:
       given Decoder[Username] = Decoder[String].emap(fromString)
-      given SchemaOf[Username] with
-        def apply: JsonSchemaCodec = JsonSchemaCodec(
-          `type` = Some(Left(SchemaType.String)),
-          minLength = Some(1),
-          maxLength = Some(25)
-        )
+//      given SchemaOf[Username] with
+//        def apply: JsonSchemaCodec = JsonSchemaCodec(
+//          `type` = Some(Left(SchemaType.String)),
+//          minLength = Some(1),
+//          maxLength = Some(25)
+//        )
       def fromString: String => Either[String, Username] =
         validUsername(_)
           .map(Username(_))
