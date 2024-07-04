@@ -17,13 +17,13 @@ object SchemaType:
   val Array = "array"
   val Number = "number"
   def fromSingular: JsonSchema.Singular => Option[SchemaType] = {
-    case JsonSchema.Singular.String(_)    => Some(SchemaType.String)
-    case JsonSchema.Singular.Null         => Some(SchemaType.Null)
-    case JsonSchema.Singular.Integer      => Some(SchemaType.Integer)
-    case JsonSchema.Singular.Object(_, _) => Some(SchemaType.Object)
-    case JsonSchema.Singular.Boolean      => Some(SchemaType.Boolean)
-    case JsonSchema.Singular.Number       => Some(SchemaType.Number)
-    case JsonSchema.Singular.True         => None
+    case JsonSchema.Singular.String(_)       => Some(SchemaType.String)
+    case JsonSchema.Singular.Null            => Some(SchemaType.Null)
+    case JsonSchema.Singular.Integer         => Some(SchemaType.Integer)
+    case JsonSchema.Singular.Object(_, _, _) => Some(SchemaType.Object)
+    case JsonSchema.Singular.Boolean         => Some(SchemaType.Boolean)
+    case JsonSchema.Singular.Number          => Some(SchemaType.Number)
+    case JsonSchema.Singular.True            => None
   }
 
 type JsonSchemaCodec = json.Fix[JsonSchemaCodec.Unfixed]
@@ -39,24 +39,52 @@ object JsonSchema:
     case Null
     case Integer
     case Object(
-        properties: Option[Map[java.lang.String, JsonSchema]] = None,
-        required: Option[List[java.lang.String]] = None
+        properties: Option[Map[java.lang.String, JsonSchema]],
+        required: Option[List[java.lang.String]],
+        additionalProperties: Option[JsonSchema]
     )
     case Boolean
     case Number
     case True
-  object Singular:
-    def isComplex: Singular => Boolean = {
-      case String(format) => format.isDefined
-      case Null           => false
-      case Integer        => false
-      case Object(properties, required) =>
-        properties.isDefined || required.isDefined
-      case Boolean => false
-      case Number =>
-        false
-      case True => false
+
+  enum ComplexType:
+    case FormattedString(format: java.lang.String)
+    case Object(
+        properties: Option[Map[java.lang.String, JsonSchema]],
+        required: Option[List[java.lang.String]],
+        additionalProperties: Option[JsonSchema]
+    )
+  object ComplexType:
+    def fromSingular: Singular => Option[ComplexType] = {
+      case Singular.Object(properties, required, additionalProperties)
+          if properties.isDefined || required.isDefined || additionalProperties.isDefined =>
+        Some(Object(properties, required, additionalProperties))
+      case Singular.String(Some(format)) => Some(FormattedString(format))
+      case _                             => None
     }
+  def string(
+      format: Option[String] = None,
+      minLength: Option[Int] = None
+  ): JsonSchema =
+    JsonSchema.fromSingular(JsonSchema.Singular.String(format))
+  val integer: JsonSchema =
+    JsonSchema.fromSingular(JsonSchema.Singular.Integer)
+  val boolean: JsonSchema =
+    JsonSchema.fromSingular(JsonSchema.Singular.Boolean)
+  val `null`: JsonSchema =
+    JsonSchema.fromSingular(JsonSchema.Singular.Null)
+  def `object`(
+      properties: Option[Map[String, JsonSchema]] = None,
+      required: Option[List[String]] = None,
+      additionalProperties: Option[JsonSchema] = None
+  ): JsonSchema =
+    JsonSchema.fromSingular(
+      JsonSchema.Singular.Object(properties, required, additionalProperties)
+    )
+  val `true`: JsonSchema =
+    JsonSchema.fromSingular(JsonSchema.Singular.True)
+  val `number`: JsonSchema =
+    JsonSchema.fromSingular(JsonSchema.Singular.Number)
 
   def fromSingular(schema: JsonSchema.Singular): JsonSchema = JsonSchema(
     List(schema)
@@ -92,26 +120,65 @@ object JsonSchemaCodec:
       )
     )
   )
+  def encodeProperties(properties: Map[String, JsonSchema]): JsonObject[
+    Map[String, JsonSchemaCodec]
+  ] = JsonObject(properties.view.mapValues(fromJsonSchema).toMap)
 
   def fromJsonSchema: JsonSchema => JsonSchemaCodec = {
     case JsonSchema(List(JsonSchema.Singular.True)) => Fix(Left(true))
     case JsonSchema(schemas) =>
-      val (maybeProperties, maybeRequired) =
-        schemas.filter(JsonSchema.Singular.isComplex) match {
-          case List(JsonSchema.Singular.Object(properties, required)) =>
-            (properties, required)
-          case _ => (None, None)
-        }
-      JsonSchemaCodec.apply(
-        `type` = Some(
-          singular(schemas.flatMap(SchemaType.fromSingular))
-            .map(JsonArray(_))
-        ),
-        properties = maybeProperties.map(properties =>
-          JsonObject(properties.view.mapValues(fromJsonSchema).toMap)
-        ),
-        required = maybeRequired.map(JsonArray(_))
+      val `type` = Some(
+        singular(schemas.flatMap(SchemaType.fromSingular).distinct)
+          .map(JsonArray(_))
       )
+      schemas.flatMap(JsonSchema.ComplexType.fromSingular) match {
+        case List(
+              JsonSchema.ComplexType.Object(
+                maybeProperties,
+                maybeRequired,
+                maybeAdditionalProperties
+              )
+            ) =>
+          JsonSchemaCodec.apply(
+            `type` = `type`,
+            properties = maybeProperties.map(encodeProperties),
+            required = maybeRequired.map(JsonArray(_)),
+            additionalProperties = maybeAdditionalProperties.map(fromJsonSchema)
+          )
+        case List(JsonSchema.ComplexType.FormattedString(format)) =>
+          JsonSchemaCodec.apply(
+            `type` = `type`,
+            format = Some(format)
+          )
+        case Nil =>
+          JsonSchemaCodec.apply(
+            `type` = `type`
+          )
+        case pairs =>
+          JsonSchemaCodec.apply(
+            `type` = `type`,
+            anyOf = Some {
+              JsonArray(
+                pairs.flatMap {
+                  case JsonSchema.ComplexType.Object(
+                        maybeProperties,
+                        maybeRequired,
+                        maybeAdditionalProperties
+                      ) =>
+                    Some(
+                      JsonSchemaCodec.apply(
+                        properties = maybeProperties.map(encodeProperties),
+                        required = maybeRequired.map(JsonArray(_)),
+                        additionalProperties =
+                          maybeAdditionalProperties.map(fromJsonSchema)
+                      )
+                    )
+                  case _ => None
+                }
+              )
+            }
+          )
+      }
 
   }
   def of[A: SchemaOf]: JsonSchemaCodec =
@@ -146,32 +213,27 @@ trait SchemaOf[A]:
   def apply: JsonSchema
 
 object SchemaOf:
-//  given objMap[A: SchemaOf]: SchemaOf[JsonObject[Map[String, A]]] with
-//    def apply: JsonSchemaCodec = JsonSchemaCodec(
-//      `type` = Some(Left(SchemaType.Object)),
-//      additionalProperties = Some(summon[SchemaOf[A]].apply)
-//    )
+  given objMap[A: SchemaOf]: SchemaOf[JsonObject[Map[String, A]]] with
+    def apply: JsonSchema = JsonSchema.`object`(
+      additionalProperties = Some(summon[SchemaOf[A]].apply)
+    )
   given SchemaOf[String] with
-    def apply: JsonSchema =
-      JsonSchema.fromSingular(JsonSchema.Singular.String())
+    def apply: JsonSchema = JsonSchema.string()
   given SchemaOf[Int] with
-    def apply: JsonSchema = JsonSchema.fromSingular(JsonSchema.Singular.Integer)
+    def apply: JsonSchema = JsonSchema.integer
   given SchemaOf[Boolean] with
-    def apply: JsonSchema = JsonSchema.fromSingular(JsonSchema.Singular.Boolean)
+    def apply: JsonSchema = JsonSchema.boolean
   given SchemaOf[JsonNull] with
-    def apply: JsonSchema = JsonSchema.fromSingular(JsonSchema.Singular.Null)
+    def apply: JsonSchema = JsonSchema.`null`
   given SchemaOf[circe.JsonObject] with
     def apply: JsonSchema =
-      JsonSchema.fromSingular(JsonSchema.Singular.Object())
+      JsonSchema.`object`()
   given SchemaOf[circe.Json] with
-    def apply: JsonSchema = JsonSchema.fromSingular(JsonSchema.Singular.True)
+    def apply: JsonSchema = JsonSchema.`true`
   given SchemaOf[Double] with
-    def apply: JsonSchema = JsonSchema.fromSingular(JsonSchema.Singular.Number)
+    def apply: JsonSchema = JsonSchema.number
   given SchemaOf[Email] with
-    def apply: JsonSchema =
-      JsonSchema.fromSingular(
-        JsonSchema.Singular.String(format = Some("email"))
-      )
+    def apply: JsonSchema = JsonSchema.string(format = Some("email"))
 //  given [A: SchemaOf]: SchemaOf[JsonArray[A]] with
 //    def apply: JsonSchemaCodec = JsonSchemaCodec(
 //      `type` = Some(Left(SchemaType.Array)),
@@ -179,13 +241,10 @@ object SchemaOf:
 //    )
   given objWithProperties[A: PropertiesOf: RequiredOf]: SchemaOf[JsonObject[A]]
   with
-    def apply: JsonSchema =
-      JsonSchema.fromSingular(
-        JsonSchema.Singular.Object(
-          properties = Some(summon[PropertiesOf[A]].apply),
-          required = Some(summon[RequiredOf[A]].apply)
-        )
-      )
+    def apply: JsonSchema = JsonSchema.`object`(
+      properties = Some(summon[PropertiesOf[A]].apply),
+      required = Some(summon[RequiredOf[A]].apply)
+    )
   given [A: SchemaOf, B: SchemaOf]: SchemaOf[Either[A, B]] with
     def apply: JsonSchema =
       JsonSchema.or(summon[SchemaOf[A]].apply, summon[SchemaOf[B]].apply)
