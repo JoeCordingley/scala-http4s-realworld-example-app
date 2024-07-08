@@ -16,6 +16,16 @@ object SchemaType:
   val Null = "null"
   val Array = "array"
   val Number = "number"
+  def fromSingular: JsonSchema.Singular => Option[SchemaType] = {
+    case _: JsonSchema.Singular.String => Some(String)
+    case _: JsonSchema.Singular.Object => Some(Object)
+    case JsonSchema.Singular.Integer   => Some(Integer)
+    case JsonSchema.Singular.Boolean   => Some(Boolean)
+    case JsonSchema.Singular.Null      => Some(Null)
+    case _: JsonSchema.Singular.Array  => Some(Array)
+    case JsonSchema.Singular.Number    => Some(Number)
+    case _                             => None
+  }
 
 type JsonSchemaCodec = json.Fix[JsonSchemaCodec.Unfixed]
 case class JsonSchema(schemas: List[JsonSchema.Singular])
@@ -132,10 +142,12 @@ object JsonSchemaCodec:
     `type` = Some(Left(s))
   )
 
-  def fromSingular: JsonSchema.Singular => JsonSchemaCodec = {
+  def fromSingular(
+      removeType: Boolean
+  ): JsonSchema.Singular => JsonSchemaCodec = {
     case JsonSchema.Singular.String(format, minLength, maxLength) =>
       JsonSchemaCodec.`object`(
-        `type` = Some(Left(SchemaType.String)),
+        `type` = Some(Left(SchemaType.String)).filterNot(_ => removeType),
         format = format,
         minLength = minLength,
         maxLength = maxLength
@@ -149,7 +161,7 @@ object JsonSchemaCodec:
           additionalProperties
         ) =>
       JsonSchemaCodec.`object`(
-        `type` = Some(Left(SchemaType.Object)),
+        `type` = Some(Left(SchemaType.Object)).filterNot(_ => removeType),
         properties = properties.map(properties =>
           JsonObject(properties.view.mapValues(fromJsonSchema).toMap)
         ),
@@ -180,7 +192,7 @@ object JsonSchemaCodec:
     case JsonSchema(schemas) =>
       schemas match {
         case List(JsonSchema.Singular.True) => JsonSchemaCodec.`true`
-        case List(schema)                   => fromSingular(schema)
+        case List(schema) => fromSingular(removeType = false)(schema)
         case schemas =>
           schemas.foldM(Set.empty[SchemaType]) { case (set, singular) =>
             JsonSchema.Singular
@@ -192,9 +204,30 @@ object JsonSchemaCodec:
                 `type` = Some(Right(JsonArray(types.toList)))
               )
             case None =>
-              JsonSchemaCodec.`object`(
-                anyOf = Some(JsonArray(schemas.map(fromSingular)))
-              )
+              schemas
+                .foldM(none[SchemaType]) {
+                  case (None, singular) =>
+                    SchemaType.fromSingular(singular).map(Some(_))
+                  case (Some(previous), singular) =>
+                    if SchemaType.fromSingular(singular) == Some(previous) then
+                      Some(Some(previous))
+                    else None
+                }
+                .flatten match {
+                case Some(singularType) =>
+                  JsonSchemaCodec.`object`(
+                    `type` = Some(Left(singularType)),
+                    anyOf = Some(
+                      JsonArray(schemas.map(fromSingular(removeType = true)))
+                    )
+                  )
+                case None =>
+                  JsonSchemaCodec.`object`(
+                    anyOf = Some(
+                      JsonArray(schemas.map(fromSingular(removeType = false)))
+                    )
+                  )
+              }
           }
       }
   }
