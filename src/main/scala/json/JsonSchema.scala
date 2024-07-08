@@ -134,13 +134,18 @@ object JsonSchemaCodec:
     )
   )
 
-  def simplyTyped(s: SchemaType): JsonSchemaCodec = JsonSchemaCodec.`object`(
-    `type` = Some(Left(s))
-  )
+  def simplyTyped(s: SchemaType, removeType: Boolean): JsonSchemaCodec =
+    if removeType then JsonSchemaCodec.`true`
+    else
+      JsonSchemaCodec.`object`(
+        `type` = Some(Left(s))
+      )
 
   def fromSingular(
       removeType: Boolean
   ): JsonSchema.Singular => JsonSchemaCodec = {
+    case JsonSchema.Singular.String(None, None, None) =>
+      simplyTyped(SchemaType.String, removeType)
     case JsonSchema.Singular.String(format, minLength, maxLength) =>
       JsonSchemaCodec.`object`(
         `type` = if removeType then None else Some(Left(SchemaType.String)),
@@ -148,9 +153,12 @@ object JsonSchemaCodec:
         minLength = minLength,
         maxLength = maxLength
       )
-    case JsonSchema.Singular.True    => JsonSchemaCodec.`true`
-    case JsonSchema.Singular.Null    => simplyTyped(SchemaType.Null)
-    case JsonSchema.Singular.Integer => simplyTyped(SchemaType.Integer)
+    case JsonSchema.Singular.True => JsonSchemaCodec.`true`
+    case JsonSchema.Singular.Null => simplyTyped(SchemaType.Null, removeType)
+    case JsonSchema.Singular.Integer =>
+      simplyTyped(SchemaType.Integer, removeType)
+    case JsonSchema.Singular.Object(None, None, None) =>
+      simplyTyped(SchemaType.Object, removeType)
     case JsonSchema.Singular.Object(
           properties,
           required,
@@ -165,13 +173,13 @@ object JsonSchemaCodec:
         additionalProperties = additionalProperties.map(fromJsonSchema)
       )
     case JsonSchema.Singular.Boolean =>
-      simplyTyped(SchemaType.Boolean)
+      simplyTyped(SchemaType.Boolean, removeType)
     case JsonSchema.Singular.Number =>
-      simplyTyped(SchemaType.Number)
+      simplyTyped(SchemaType.Number, removeType)
     case JsonSchema.Singular.Array(
           JsonSchema(List(JsonSchema.Singular.True))
         ) =>
-      simplyTyped(SchemaType.Array)
+      simplyTyped(SchemaType.Array, removeType)
     case JsonSchema.Singular.Array(
           items
         ) =>

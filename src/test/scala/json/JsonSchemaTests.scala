@@ -347,7 +347,7 @@ object JsonSchemaTests extends TestSuite {
         "type": "string",
         "anyOf": $anyOf
       }""")
-      val expectedFirstSchema = json"{}"
+      val expectedFirstSchema = json"true"
       val expectedSecondSchema = json"""{
         "format": "email"
       }"""
