@@ -14,9 +14,11 @@ import io.circe.DecodingFailure.Reason
 import scala.annotation.experimental
 
 object JsonSchemaTests extends TestSuite {
-  def addToSet[A](s: Set[A], a: A) = if (s contains a) None else Some(s + a)
+  def addToSetStrictly[A](s: Set[A], a: A) =
+    if (s contains a) None else Some(s + a)
 
-  def toSet[A](l: List[A]): Option[Set[A]] = l.foldM(Set.empty)(addToSet)
+  def toSet[A](l: List[A]): Option[Set[A]] =
+    l.foldM(Set.empty)(addToSetStrictly)
 
   case class StrictSet[A](s: Set[A])
   object StrictSet:
@@ -82,21 +84,15 @@ object JsonSchemaTests extends TestSuite {
       val schema = JsonSchemaCodec
         .fromJsonSchema(summon[SchemaOf[Either[String, JsonNull]]].apply)
         .asJson
-      val expectedSchema = (anyOf: Json) => parse(s"""{
-          "anyOf": $anyOf
+      val expectedSchema = (`type`: Json) => parse(s"""{
+          "type": ${`type`}
         }""")
-      val expectedFirstSchema = json"""{
-        "type": "string"
-      }"""
-      val expectedSecondSchema = json"""{
-        "type": "null"
-      }"""
       assert(
-        maybeAnyOf(schema).flatMap(_.as[StrictSet[Json]]) == Right(
-          StrictSet(Set(expectedFirstSchema, expectedSecondSchema))
+        maybeType(schema).flatMap(_.as[StrictSet[String]]) == Right(
+          StrictSet(Set("null", "string"))
         )
       )
-      assert(Right(schema) == maybeAnyOf(schema).flatMap(expectedSchema))
+      assert(Right(schema) == maybeType(schema).flatMap(expectedSchema))
     }
 
     test("object or null") {
@@ -245,25 +241,19 @@ object JsonSchemaTests extends TestSuite {
         ]
         .asJson
       val maybeKeyTypes =
-        Decoder[Json].at("anyOf").at("key").at("properties").decodeJson
-      val expectedSchema = (anyOf: Json) => parse(s"""{
+        Decoder[Json].at("type").at("key").at("properties").decodeJson
+      val expectedSchema = (`type`: Json) => parse(s"""{
           "type": "object",
           "properties": {
             "key": {
-              "anyOf": $anyOf
+              "type": ${`type`}
             }
           },
           "required": ["key"]
         }""")
-      val expectedFirstSchema = json"""{
-        "type": "string"
-      }"""
-      val expectedSecondSchema = json"""{
-        "type": "null"
-      }"""
       assert(
-        maybeKeyTypes(schema).flatMap(_.as[StrictSet[Json]]) == Right(
-          StrictSet(Set(expectedFirstSchema, expectedSecondSchema))
+        maybeKeyTypes(schema).flatMap(_.as[StrictSet[String]]) == Right(
+          StrictSet(Set("null", "string"))
         )
       )
       assert(Right(schema) == maybeKeyTypes(schema).flatMap(expectedSchema))
