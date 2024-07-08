@@ -52,22 +52,18 @@ object JsonSchema:
     case Number
     case Array(items: JsonSchema)
     case True
+
   object Singular:
-    def describedByTypeAlone: Singular => Option[SchemaType] = {
-      case String(format, minLength, maxLength)
-          if format.isEmpty && minLength.isEmpty && maxLength.isEmpty =>
-        Some(SchemaType.String)
-      case Null    => Some(SchemaType.Null)
-      case Integer => Some(SchemaType.Integer)
-      case Object(properties, required, additionalProperties)
-          if properties.isEmpty && required.isEmpty && additionalProperties.isEmpty =>
-        Some(SchemaType.Object)
-      case Boolean => Some(SchemaType.Boolean)
-      case Number  => Some(SchemaType.Number)
-      case Array(JsonSchema(List(JsonSchema.Singular.True))) =>
-        Some(SchemaType.Array)
-      case _ => None
+    def isSimple: Singular => Boolean = {
+      case String(format, minLength, maxLength) =>
+        format.isEmpty && minLength.isEmpty && maxLength.isEmpty
+      case Object(properties, required, additionalProperties) =>
+        properties.isEmpty && required.isEmpty && additionalProperties.isEmpty
+      case Array(schema) => schema == JsonSchema(List(JsonSchema.Singular.True))
+      case _             => true
     }
+    def describedByTypeAlone: Singular => Option[SchemaType] = singular =>
+      SchemaType.fromSingular(singular).filter(_ => isSimple(singular))
 
   def string(
       format: Option[String] = None,
@@ -147,7 +143,7 @@ object JsonSchemaCodec:
   ): JsonSchema.Singular => JsonSchemaCodec = {
     case JsonSchema.Singular.String(format, minLength, maxLength) =>
       JsonSchemaCodec.`object`(
-        `type` = Some(Left(SchemaType.String)).filterNot(_ => removeType),
+        `type` = if removeType then None else Some(Left(SchemaType.String)),
         format = format,
         minLength = minLength,
         maxLength = maxLength
@@ -161,7 +157,7 @@ object JsonSchemaCodec:
           additionalProperties
         ) =>
       JsonSchemaCodec.`object`(
-        `type` = Some(Left(SchemaType.Object)).filterNot(_ => removeType),
+        `type` = if removeType then None else Some(Left(SchemaType.Object)),
         properties = properties.map(properties =>
           JsonObject(properties.view.mapValues(fromJsonSchema).toMap)
         ),
@@ -188,49 +184,40 @@ object JsonSchemaCodec:
   def addToSetStrictly[A](s: Set[A], a: A) =
     if (s contains a) None else Some(s + a)
 
-  def fromJsonSchema: JsonSchema => JsonSchemaCodec = {
-    case JsonSchema(schemas) =>
-      schemas match {
-        case List(JsonSchema.Singular.True) => JsonSchemaCodec.`true`
-        case List(schema) => fromSingular(removeType = false)(schema)
-        case schemas =>
-          schemas.foldM(Set.empty[SchemaType]) { case (set, singular) =>
-            JsonSchema.Singular
-              .describedByTypeAlone(singular)
-              .flatMap(addToSetStrictly(set, _))
-          } match {
-            case Some(types) =>
-              JsonSchemaCodec.`object`(
-                `type` = Some(Right(JsonArray(types.toList)))
-              )
-            case None =>
-              schemas
-                .foldM(none[SchemaType]) {
-                  case (None, singular) =>
-                    SchemaType.fromSingular(singular).map(Some(_))
-                  case (Some(previous), singular) =>
-                    if SchemaType.fromSingular(singular) == Some(previous) then
-                      Some(Some(previous))
-                    else None
+  def fromJsonSchema(schema: JsonSchema): JsonSchemaCodec =
+    schema.schemas match {
+      case List(JsonSchema.Singular.True) => JsonSchemaCodec.`true`
+      case List(schema) => fromSingular(removeType = false)(schema)
+      case schemas =>
+        schemas.foldM(Set.empty[SchemaType]) { case (set, singular) =>
+          JsonSchema.Singular
+            .describedByTypeAlone(singular)
+            .flatMap(addToSetStrictly(set, _))
+        } match {
+          case Some(types) =>
+            JsonSchemaCodec.`object`(
+              `type` = Some(Right(JsonArray(types.toList)))
+            )
+          case None =>
+            val maybeSingularType = schemas
+              .foldM(none[SchemaType]) { case (maybePrevious, singular) =>
+                SchemaType.fromSingular(singular).collect {
+                  case t if maybePrevious.forall(_ == t) => Some(t)
                 }
-                .flatten match {
-                case Some(singularType) =>
-                  JsonSchemaCodec.`object`(
-                    `type` = Some(Left(singularType)),
-                    anyOf = Some(
-                      JsonArray(schemas.map(fromSingular(removeType = true)))
-                    )
-                  )
-                case None =>
-                  JsonSchemaCodec.`object`(
-                    anyOf = Some(
-                      JsonArray(schemas.map(fromSingular(removeType = false)))
-                    )
-                  )
               }
-          }
-      }
-  }
+              .flatten
+            JsonSchemaCodec.`object`(
+              `type` = maybeSingularType.map(Left(_)),
+              anyOf = Some(
+                JsonArray(
+                  schemas.map(
+                    fromSingular(removeType = maybeSingularType.isDefined)
+                  )
+                )
+              )
+            )
+        }
+    }
 
   def of[A: SchemaOf]: JsonSchemaCodec =
     JsonSchemaCodec.fromJsonSchema(summon[SchemaOf[A]].apply)
