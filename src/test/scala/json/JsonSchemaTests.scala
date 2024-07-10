@@ -398,5 +398,55 @@ object JsonSchemaTests extends TestSuite {
         }
       }""")
     }
+    test("const") {
+      testFixed["value"](json"""{
+        "const": "value"
+      }""")
+    }
+    test("enum") {
+      val schemaJson =
+        JsonSchemaCodec.of[Either["first case", "second case"]].asJson
+      val expectedSchema = (`enum`: Json) => parse(s"""{
+        "enum": ${`enum`}
+      }""")
+      val maybeEnum = Decoder[Json].at("enum").decodeJson
+      assert(
+        maybeEnum(schemaJson).flatMap(_.as[StrictSet[String]]) == Right(
+          StrictSet(
+            Set(
+              "first case",
+              "second case"
+            )
+          )
+        )
+      )
+      assert(
+        Right(schemaJson) == maybeEnum(schemaJson).flatMap(expectedSchema)
+      )
+    }
+//    test("schemaType") {
+//      val schemaJson = JsonSchemaCodec.of[SchemaType].asJson
+//      val expectedSchema = (`enum`: Json) => parse("""{
+//        "enum": ${`enum`}
+//      }""")
+//      val maybeEnum = Decoder[Json].at("enum").decodeJson
+//      assert(SchemaType.Object.asJson == json""""object"""")
+//      assert(
+//        maybeEnum(schemaJson).flatMap(_.as[StrictSet[String]]) == Right(
+//          StrictSet(
+//            Set(
+//              "string",
+//              "object",
+//              "integer",
+//              "boolean",
+//              "null",
+//              "array",
+//              "number"
+//            )
+//          )
+//        )
+//      )
+//
+//    }
   }
 }
