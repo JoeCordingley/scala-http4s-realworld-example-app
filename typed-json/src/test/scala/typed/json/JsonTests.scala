@@ -1,4 +1,4 @@
-package json
+package typed.json
 
 import utest.*
 import io.circe.literal.*

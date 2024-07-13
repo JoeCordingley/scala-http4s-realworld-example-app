@@ -1,6 +1,6 @@
 package test.io.rw.app.routes
 
-import json.*
+import typed.json.*
 import cats.*
 import cats.data.*
 import cats.effect.IO

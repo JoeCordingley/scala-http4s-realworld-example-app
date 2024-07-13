@@ -1,4 +1,4 @@
-package json
+package typed.json
 
 import scala.util.matching.Regex
 import io.circe.{Decoder, Encoder}

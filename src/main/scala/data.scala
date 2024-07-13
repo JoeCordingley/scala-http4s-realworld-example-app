@@ -5,11 +5,11 @@ import pureconfig.ConfigReader
 import pureconfig.generic.derivation.default.*
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
-import json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
+import typed.json.{JsonObject, Nullable, oNValue, JsonNull, JsonArray, Email}
 import cats.data.NonEmptyList
 import io.rw.app.validation.*
 import cats.syntax.all.*
-import json.{SchemaType, SchemaOf, JsonSchemaCodec}
+import typed.json.{SchemaType, SchemaOf, JsonSchemaCodec}
 
 object data {
 

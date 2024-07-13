@@ -10,7 +10,7 @@ import io.rw.app.validation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
-import json.given
+import typed.json.given
 
 object ProfileRoutes {
 

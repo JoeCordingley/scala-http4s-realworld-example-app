@@ -11,7 +11,7 @@ import io.rw.app.validation.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
-import json.{JsonObject, given}
+import typed.json.{JsonObject, given}
 
 object CommentRoutes {
 

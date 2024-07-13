@@ -1,6 +1,6 @@
 package schemas
 
-import json.*
+import typed.json.*
 import io.rw.app.data.JsonCodec.*
 
 object UserSchemas

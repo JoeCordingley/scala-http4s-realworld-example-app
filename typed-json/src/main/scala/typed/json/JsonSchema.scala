@@ -1,4 +1,4 @@
-package json
+package typed.json
 
 import org.http4s.Uri
 import cats.syntax.option
@@ -34,7 +34,7 @@ object SchemaType:
     case _                             => None
   }
 
-type JsonSchemaCodec = json.Fix[JsonSchemaCodec.Unfixed]
+type JsonSchemaCodec = Fix[JsonSchemaCodec.Unfixed]
 case class JsonSchema(schemas: List[JsonSchema.Singular])
 
 object JsonSchema:

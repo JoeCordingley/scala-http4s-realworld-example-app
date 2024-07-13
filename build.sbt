@@ -11,12 +11,31 @@ val pgEmbededVersion = "0.13.3"
 val flywayVersion = "6.2.0"
 val uTestVersion = "0.8.1"
 
-lazy val root = (project in file("."))
+ThisBuild / scalaVersion := "3.3.1"
+ThisBuild / testFrameworks += new TestFramework("utest.runner.Framework")
+
+lazy val `typed-json` = (project in file("typed-json"))
   .settings(
+    organization := "com.joecordingley",
+    name := "typed-json",
+    version := "0.0.1-SNAPSHOT",
+    libraryDependencies ++= List(
+      "org.http4s" %% "http4s-core" % "1.0.0-M38",
+      "com.lihaoyi" %% "utest" % "0.8.1" % Test,
+      "org.typelevel" %% "cats-core" % "2.12.0",
+      "io.circe" %% "circe-core" % "0.14.9",
+      "io.circe" %% "circe-parser" % "0.14.9",
+      "io.circe" %% "circe-literal" % "0.14.9",
+      "org.scalacheck" %% "scalacheck" % "1.17.0" % Test
+    )
+  )
+
+lazy val root = (project in file("."))
+  .dependsOn(`typed-json`)
+  .settings(
+    version := "0.0.1",
     organization := "io.rw.app",
     name := "scala-http4s-realworld",
-    version := "0.0.1",
-    scalaVersion := "3.3.1",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-blaze-server" % http4sVersion,
       "org.http4s" %% "http4s-blaze-client" % http4sVersion,
@@ -38,7 +57,6 @@ lazy val root = (project in file("."))
       "org.scalacheck" %% "scalacheck" % "1.17.0" % Test,
       "org.flywaydb" % "flyway-core" % flywayVersion % Test
     ),
-    testFrameworks += new TestFramework("utest.runner.Framework"),
     dockerBaseImage := "openjdk:11-jre-slim"
   )
 

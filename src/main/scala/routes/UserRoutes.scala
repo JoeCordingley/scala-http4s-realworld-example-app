@@ -16,7 +16,7 @@ import io.circe.{Json, Decoder}
 import org.http4s.*
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.dsl.Http4sDsl
-import json.{JsonObject, given}
+import typed.json.{JsonObject, given}
 import io.rw.app.data.ApiError
 import cats.MonadThrow
 import io.rw.app.data.JsonCodec.WrappedUser

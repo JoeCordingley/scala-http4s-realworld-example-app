@@ -1,10 +1,10 @@
-package json
+package typed.json
 
 import io.circe.syntax.*
 import io.circe.{Decoder, Json}
 import io.circe.parser.parse
-import json.JsonSchemaCodec.given
-import json.SchemaType
+import typed.json.JsonSchemaCodec.given
+import typed.json.SchemaType
 import utest.*
 import io.circe.literal.*
 import io.circe

@@ -1,4 +1,4 @@
-package json
+package typed.json
 
 import cats.syntax.all.*
 import io.circe.{Decoder, Encoder, Codec, Json}

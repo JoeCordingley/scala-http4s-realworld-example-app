@@ -3,9 +3,9 @@ package schemas
 import utest.*
 import io.circe.syntax.*
 import io.circe.Encoder
-import json.*
-import json.given
-import json.JsonSchemaCodec.given
+import typed.json.*
+import typed.json.given
+import typed.json.JsonSchemaCodec.given
 import io.circe.literal.*
 
 object SchemasTest extends TestSuite {
